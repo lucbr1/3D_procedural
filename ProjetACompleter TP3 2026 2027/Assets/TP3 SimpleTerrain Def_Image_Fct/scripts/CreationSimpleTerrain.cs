@@ -16,7 +16,7 @@ public class CreationSimpleTerrain : MonoBehaviour
 {
     #region Variables
 
-    #region Fenêtre infos
+    #region FenÃªtre infos
     [SerializeField] private GameObject fenetreInfo;
 
     [SerializeField] private TMP_Text tmpVertices;
@@ -25,20 +25,23 @@ public class CreationSimpleTerrain : MonoBehaviour
     [SerializeField] private TMP_Text tmpModeNormales;
     [SerializeField] private TMP_Text tmpFPS;
     [SerializeField] private TMP_Text tmpInteractions;
+
+    //TP4 - ex1
+    [SerializeField] private TMP_Text tmpDeformation;
     #endregion
 
-    #region Paramétrage
+    #region ParamÃ©trage
     [Range(1, 2000)] 
     public float dimension = 100;
     [Range(1, 15)]
-    [Tooltip("La resolution sera 2 élévé à la puissance de cette valeur 2^n " )]
+    [Tooltip("La resolution sera Ã©levÃ©e Ã  la puissance de cette valeur 2^n " )]
     public int puissance2Resolution = 1;
     [HideInInspector] public ushort resolution;
 
     [Range(0, 100)]
     public float hauteurMax = 10f;
     [Range(0, 100)]
-    public float rotationSpeed = 20f; // Vitesse de rotation en degrés par seconde
+    public float rotationSpeed = 20f; // Vitesse de rotation en degrÃ©s par seconde
 
     [Tooltip("Choix du mode de calcul des normales ")]
     public enum ModeCalculNormale
@@ -49,7 +52,7 @@ public class CreationSimpleTerrain : MonoBehaviour
     }
     public ModeCalculNormale modeCalculNormale = ModeCalculNormale.Basique;
 
-    [Tooltip("Information sur le mode de génération :  ")]
+    [Tooltip("Information sur le mode de gÃ©nÃ©ration :  ")]
     public enum ChoixModeDeformation
     {
         Fonction,
@@ -62,10 +65,10 @@ public class CreationSimpleTerrain : MonoBehaviour
         Collines,
         Perlin
     }
-    [Tooltip("Choix de la première fonction à appliquer ")]
+    [Tooltip("Choix de la premiÃ¨re fonction Ã  appliquer ")]
     public TypeFonction typeFonction;
 
-    [Tooltip("Choix de la première HeightMap à appliquer ")] 
+    [Tooltip("Choix de la premiÃ¨re HeightMap Ã  appliquer ")] 
     public int numTexture;
     [Tooltip("Les HeightMaps disponibles ")]
     public List<Texture2D>  textures;
@@ -88,17 +91,46 @@ public class CreationSimpleTerrain : MonoBehaviour
     private Camera p_cam;
     private LayerMask maskPickingTerrain;
 
+
+    #region DÃ©formation
+    [Header("DÃ©formation par pattern")]
+    public List<AnimationCurve> patterns = new List<AnimationCurve>();
+    public int indexPattern = 0;
+    [Range(0.1f, 50f)]  public float intensiteMax = 10f;      // unitÃ©s de hauteur par seconde
+    [Range(1f, 200f)]   public float rayonVoisinage = 10f;   // en unitÃ©s monde (local)
+    public float pasIntensite = 0.5f;
+    public float pasRayon = 1f;
+
+    private float p_longueurCarre; // pas de la grille, renseignÃ© Ã  la crÃ©ation du mesh
+    private bool  p_updateCollider = false;
+    private float p_dernierMajCollider = 0f;
+    private const float DELAI_MAJ_COLLIDER = 0.1f;
+    #endregion
+
+    #region AperÃ§u de dÃ©formation
+    [Header("AperÃ§u de dÃ©formation")]
+    [Tooltip("MatÃ©riau transparent qui utilise les couleurs de vertex (sinon Sprites/Default)")]
+    public Material materielApercu;
+    public float decalageApercu = 0.05f;
+
+    private GameObject p_apercuGO;
+    private Mesh       p_apercuMesh;
+    private Vector3[]  p_apercuVertices;
+    private Color[]    p_apercuCouleurs;
+    private int        p_apercuNx = -1, p_apercuNy = -1;
+    #endregion
+
     #endregion
 
 #if UNITY_EDITOR
-    // cette méthode est appelée la première fois que le component est ajouté à l'objet (ou quand reset demandé sur le component depuis l'inspector)
-    // equivalent du RequireComponent mais plus de possibilité (plusieurs components) ou intialisation automatique des paramètres public 
+    // cette mÃ©thode est appelÃ©e la premiÃ¨re fois que le component est ajoutÃ©e l'objet (ou quand reset demandÃ© sur le component depuis l'inspector)
+    // equivalent du RequireComponent mais plus de possibilitÃ©s (plusieurs components) ou intialisation automatique des paramÃ¨tres public 
     void Reset()
     {
         if (GetComponent<MeshFilter>() == null)
-            EditorUtility.DisplayDialog("Le component MeshFilter est nécessaire à la sélection", "MeshCollider ajouté au gameObject ! ", "j'ai compris ! ");
+            EditorUtility.DisplayDialog("Le component MeshFilter est nÃ©cessaire Ã  la sÃ©lection", "MeshCollider ajoutÃ© au gameObject ! ", "j'ai compris ! ");
         //else        {
-        //    EditorUtility.DisplayDialog("MeshFilter initial supprimé avant génération procédurale ! ", "Le script génére un mesh procédural . Le mesh existant " + GetComponent<MeshFilter>().mesh.name + " a été disocié de  l'objet " + gameObject.name, "j'ai compris ! ");
+        //    EditorUtility.DisplayDialog("MeshFilter initial supprimÃ© avant gÃ©nÃ©ration procÃ©durale ! ", "Le script gÃ©nÃ¨re un mesh procÃ©dural . Le mesh existant " + GetComponent<MeshFilter>().mesh.name + " a Ã©tÃ© disociÃ© de  l'objet " + gameObject.name, "j'ai compris ! ");
         //    DestroyImmediate(GetComponent<MeshFilter>());
         //}
         
@@ -109,15 +141,15 @@ public class CreationSimpleTerrain : MonoBehaviour
         {
             foreach (Collider collider in colliders)
                 DestroyImmediate(collider);
-            EditorUtility.DisplayDialog("Un seul MeshCollider", "Tous les collider sont supprimés ; seuls un meshCollider est associé au terrain", "OK ! ");
+            EditorUtility.DisplayDialog("Un seul MeshCollider", "Tous les collider sont supprimï¿½s ; seuls un meshCollider est associï¿½ au terrain", "OK ! ");
         }
         else
-            EditorUtility.DisplayDialog("Le component MeshCollider est nécessaire à la sélection", "MeshCollider ajouté au gameObject ! ", "j'ai compris ! ");
+            EditorUtility.DisplayDialog("Le component MeshCollider est nÃ©cessaire Ã  la sÃ©lection", "MeshCollider ajoutÃ© au gameObject ! ", "j'ai compris ! ");
         p_meshCollider = gameObject.AddComponent<MeshCollider>();
         
         if (GetComponent<MeshRenderer>() == null)
         {
-            EditorUtility.DisplayDialog("Le component MeshRenderer est nécessaire à la sélection", "MeshCollider ajouté au gameObject ! ", "j'ai compris ! ");
+            EditorUtility.DisplayDialog("Le component MeshRenderer est nÃ©cessaire Ã  la sÃ©lection", "MeshCollider ajoutÃ© au gameObject ! ", "j'ai compris ! ");
             gameObject.AddComponent<MeshRenderer>();
         }
 
@@ -139,6 +171,18 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_meshCollider = GetComponent<MeshCollider>();
         p_meshCollider.sharedMesh = p_mesh;
         GetComponent<MeshFilter>().mesh = p_mesh;
+
+        if (patterns.Count == 0)
+        {
+            patterns.Add(AnimationCurve.Linear(0f, 1f, 1f, 0f));      // cÃ´ne
+            patterns.Add(AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));   // colline douce
+            patterns.Add(new AnimationCurve(                          // plateau
+                new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f)));
+            patterns.Add(new AnimationCurve(                          // anneau
+                new Keyframe(0f, 0f), new Keyframe(0.7f, 1f), new Keyframe(1f, 0f)));
+        }
+
+        CreerApercu();
     }
 
     void Start()
@@ -155,7 +199,7 @@ public class CreationSimpleTerrain : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // Gestion de l'affichage de la fenêtre d'informations avec la touche F1
+        // Gestion de l'affichage de la fenÃªtre d'informations avec la touche F1
         if (Keyboard.current.f1Key.wasPressedThisFrame)
         {
             bool afficher = !fenetreInfo.activeSelf;
@@ -168,48 +212,21 @@ public class CreationSimpleTerrain : MonoBehaviour
             }
         }
 
-        // Gestion du changement de mode de déformation des fonctions avec la touche F2
+        // Gestion du changement de mode de dÃ©formation des fonctions avec la touche F2
         if (Keyboard.current.f2Key.wasPressedThisFrame)
         {
             choixModeDeformation = ChoixModeDeformation.Fonction;
             appliquerDeformation_Fonction();
-            // la fonction suivante sera utilisée au prochain appel     
+            // la fonction suivante sera utilisÃ©e au prochain appel     
             typeFonction = (TypeFonction)(((int)typeFonction + 1) % 3);
         }
 
-
-        // Gestion de la déformation du terrain avec le clic gauche de la souris
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            if (choixModeDeformation == ChoixModeDeformation.Fonction && typeFonction == TypeFonction.Collines)
-            {
-                // il faut que la caméra par defaut ait le tag MainCamera pour que le système la reconnaisse comme Camera.main
-                Ray ray = p_cam.ScreenPointToRay(Mouse.current.position.ReadValue());
-
-                // lancer un rayon et trouver les objets de la bonne layer qui entre en collision avec le
-                // rayon ; l’argument HIT contient en sortie toutes les informations utiles
-                RaycastHit hit;
-                if (!Physics.Raycast(ray, out hit, Mathf.Infinity, maskPickingTerrain))
-                    return;
-
-                // on a sélectionné un triangle du cube avec le rayon (possible si MeshCollider !
-                // récupérer le numéro du triangle touché
-                int numSelectedTri = hit.triangleIndex;
-
-                Vector3 vertex = p_vertices[p_triangles[numSelectedTri * 3]];
-
-                appliquerDeformation_Fonction(vertex);
-            }
-
-        }
-
-
-        // Gestion du changement de mode de déformation des textures avec la touche F3
+        // Gestion du changement de mode de dÃ©formation des textures avec la touche F3
         if (Keyboard.current.f3Key.wasPressedThisFrame)
         {
             choixModeDeformation = ChoixModeDeformation.Texture;
             appliquerDeformation_Texture();
-            // l'image'suivante sera utilisée au prochain appel     
+            // l'image'suivante sera utilisÃ©e au prochain appel     
             numTexture = (numTexture + 1) % textures.Count;
         }
 
@@ -228,12 +245,12 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
 
 
-        // Gestion du double clic sur F11 pour réinitialiser le terrain
+        // Gestion du double clic sur F11 pour rÃ©initialiser le terrain
         if (Keyboard.current.f11Key.wasPressedThisFrame)
         {
             if (Time.time - p_dernierTempsF11 < DELAI_DOUBLE_CLIC)
             {
-                // Double clic détecté : réinitialisation du terrain
+                // Double clic dÃ©tectÃ© : rÃ©initialisation du terrain
                 for (int i = 0; i < p_vertices.Length; i++)
                 {
                     p_vertices[i].y = 0;
@@ -252,8 +269,8 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
 
 
-        // Gestion de la rotation automatique du terrain avec la touche Alt
-        if (Keyboard.current.altKey.wasPressedThisFrame)
+        // Gestion de la rotation automatique du terrain avec la touche r
+        if (Keyboard.current.rKey.wasPressedThisFrame)
         {
             isRotating = !isRotating;
 
@@ -270,21 +287,30 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
 
 
-        // Affichage des normales si la touche espace est maintenue
-        if (Keyboard.current.spaceKey.isPressed)
+
+        // Affichage des normales si la touche n est maintenue
+        if (Keyboard.current.nKey.isPressed)
         {
             DebugAllNormals(true, true, true);
         }
+
+        //TP4 - ex1
+
+        GererMolette();
+        GererDeformation();
+        MettreAJourColliderSiNecessaire();
+        MettreAJourApercu();
     }
     #endregion
 
-    #region Méthodes
-    // Méthode pour créer le maillage du terrain
+    #region MÃ©thodes
+    // MÃ©thode pour crÃ©er le maillage du terrain
     private void creerLeMeshTerrain()
     {
         resolution = (ushort)Mathf.Pow(2, puissance2Resolution);
 
         float longueurCarre = dimension / resolution;
+        p_longueurCarre = longueurCarre;
         Vector3 centreTerrain = new Vector3(dimension / 2f, 0, dimension / 2f);
 
         p_vertices = new Vector3[(resolution) * (resolution)];
@@ -329,12 +355,14 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_mesh.triangles = p_triangles;
         p_mesh.normals = p_normals;
         p_mesh.uv = p_uvs;
+        p_meshCollider.sharedMesh = null;
+        p_meshCollider.sharedMesh = p_mesh;
     }
 
-    // Méthode pour appliquer la déformation du terrain selon la fonction choisie
+    // MÃ©thode pour appliquer la dÃ©formation du terrain selon la fonction choisie
     private void appliquerDeformation_Fonction(Vector3? vertexCentre = null)
     {
-        //position aléatoire du centre de la fonction de déformation pour les collines
+        //position alÃ©atoire du centre de la fonction de dÃ©formation pour les collines
         float xCentre = vertexCentre == null ? Random.Range(0, dimension) : vertexCentre.Value.x;
         float zCentre = vertexCentre == null ? Random.Range(0, dimension) : vertexCentre.Value.z;
 
@@ -351,7 +379,7 @@ public class CreationSimpleTerrain : MonoBehaviour
                     break;
 
                 case TypeFonction.Collines:
-                    // Gaussienne centrée au milieu du terrain (x0, z0)
+                    // Gaussienne centrÃ©e au milieu du terrain (x0, z0)
                     float distanceAuCentreSqr = (vertex.x - xCentre) * (vertex.x - xCentre) + (vertex.z - zCentre) * (vertex.z - zCentre);
                     float sigma = dimension / 4f; // Largeur de la colline
 
@@ -359,7 +387,7 @@ public class CreationSimpleTerrain : MonoBehaviour
                     break;
 
                 case TypeFonction.Perlin:
-                    // Bruit de Perlin pseudo-aléatoire fluide
+                    // Bruit de Perlin pseudo-alÃ©atoire fluide
                     float scalePerlin = 0.05f;
                     vertex.y = Mathf.PerlinNoise(vertex.x * scalePerlin, vertex.z * scalePerlin) * hauteurMax;
                     break;
@@ -368,7 +396,7 @@ public class CreationSimpleTerrain : MonoBehaviour
             p_vertices[i] = vertex;
         }
 
-        // Mise à jour du maillage
+        // Mise Ã  jour du maillage
         p_mesh.vertices = p_vertices;
         for (int i = 0; i < p_vertices.Length; i++)
         {
@@ -379,38 +407,38 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_meshCollider.sharedMesh = p_mesh;
     }
 
-    // Méthode pour appliquer la déformation du terrain selon la texture HeightMap choisie
+    // MÃ©thode pour appliquer la dÃ©formation du terrain selon la texture HeightMap choisie
     private void appliquerDeformation_Texture()
     {
-        // Sécurité : vérifier qu'on a bien des textures dans la liste
+        // SÃ©curitÃ© : vÃ©rifier qu'on a bien des textures dans la liste
         if (textures == null || textures.Count == 0)
         {
-            Debug.LogWarning("Aucune texture de type HeightMap n'est assignée dans l'inspecteur !");
+            Debug.LogWarning("Aucune texture de type HeightMap n'est assignï¿½e dans l'inspecteur !");
             return;
         }
 
-        // Récupération de la texture courante selon l'index numTexture
+        // RÃ©cupÃ©ration de la texture courante selon l'index numTexture
         Texture2D heightmap = textures[numTexture % textures.Count];
 
         if (heightmap == null) return;
 
         for (int i = 0; i < p_vertices.Length; i++)
         {
-            // 1. On récupère les coordonnées UV du vertex courant
+            // 1. On rÃ©cupÃ¨re les coordonnÃ©es UV du vertex courant
             Vector2 uv = p_uvs[i];
 
-            // 2. GetPixelBilinear permet d'obtenir le niveau de gris de manière très précise 
-            // à partir des coordonnées UV (entre 0.0 et 1.0), peu importe la taille ou le ratio de l'image.
+            // 2. GetPixelBilinear permet d'obtenir le niveau de gris de maniÃ¨re trÃ¨s prÃ©cise 
+            // Ã  partir des coordonnÃ©es UV (entre 0.0 et 1.0), peu importe la taille ou le ratio de l'image.
             Color couleurPixel = heightmap.GetPixelBilinear(uv.x, uv.y);
 
-            // 3. On extrait la valeur de gris (grayscale / luminosité) comprise entre 0 (noir) et 1 (blanc)
+            // 3. On extrait la valeur de gris (grayscale / luminositÃ©) comprise entre 0 (noir) et 1 (blanc)
             float niveauDeGris = couleurPixel.grayscale;
 
             // 4. L'altitude Y devient proportionnelle au niveau de gris
             p_vertices[i].y = niveauDeGris * hauteurMax;
         }
 
-        // 5. Mise à jour du maillage et du collider
+        // 5. Mise Ã  jour du maillage et du collider
         p_mesh.vertices = p_vertices;
         for (int i = 0; i < p_vertices.Length; i++)
         {
@@ -421,14 +449,14 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_meshCollider.sharedMesh = p_mesh;
     }
 
-    // Méthode pour calculer la normale d'un vertex en fonction des triangles voisins
+    // MÃ©thode pour calculer la normale d'un vertex en fonction des triangles voisins
     private void calculerNormaleVertex(uint num_Vertex)
     {
         Vector3 vPosition = p_vertices[num_Vertex];
         Vector3 normaleSomme = Vector3.zero;
         float sommePoids = 0f;
 
-        // Récupération directe des triangles voisins pré-calculés
+        // RÃ©cupÃ©ration directe des triangles voisins prÃ©-calculÃ©s
         List<int> trianglesAdjacents = p_trianglesVoisinsParVertex[num_Vertex];
 
         foreach (int idxTriangle in trianglesAdjacents)
@@ -485,7 +513,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
     }
 
-    // Méthode pour pré-calculer le voisinage des triangles pour chaque vertex
+    // MÃ©thode pour prÃ©-calculer le voisinage des triangles pour chaque vertex
     private void bakerVoisinageTriangles()
     {
         // Initialisation du tableau pour chaque vertex
@@ -502,21 +530,21 @@ public class CreationSimpleTerrain : MonoBehaviour
             int vB = p_triangles[idxTriangle + 1];
             int vC = p_triangles[idxTriangle + 2];
 
-            // On enregistre l'index de départ du triangle (idxTriangle) pour les 3 sommets concernés
+            // On enregistre l'index de dÃ©part du triangle (idxTriangle) pour les 3 sommets concernÃ©s
             p_trianglesVoisinsParVertex[vA].Add(idxTriangle);
             p_trianglesVoisinsParVertex[vB].Add(idxTriangle);
             p_trianglesVoisinsParVertex[vC].Add(idxTriangle);
         }
     }
 
-    // Méthode pour afficher les informations dans la fenêtre
+    // MÃ©thode pour afficher les informations dans la fenÃªtre
     private void AfficherInfos()
     {
         // Informations sur le maillage
         tmpVertices.text = $"Vertices : {p_vertices.Length:N0}";
         tmpTriangles.text = $"Triangles : {p_triangles.Length / 3:N0}";
 
-        // Poids mémoire approximatif
+        // Poids mÃ©moire approximatif
         int memoireVertices = p_vertices.Length * sizeof(float) * 3;
         int memoireNormales = p_normals.Length * sizeof(float) * 3;
         int memoireUV = p_uvs.Length * sizeof(float) * 2;
@@ -527,14 +555,20 @@ public class CreationSimpleTerrain : MonoBehaviour
                           + memoireUV
                           + memoireTriangles;
 
-        tmpMemoire.text = $"Mémoire : {memoireTotale / 1024f:F2} Ko";
+        tmpMemoire.text = $"MÃ©moire : {memoireTotale / 1024f:F2} Ko";
 
-        // Paramètres
+        // ParamÃ¨tres
         tmpModeNormales.text = $"Mode normales : {modeCalculNormale}";
 
         // FPS
         float fps = 1f / Time.unscaledDeltaTime;
         tmpFPS.text = $"FPS : {fps:F1}";
+
+        // DÃ©formation (TP4 - Ex1)
+        tmpDeformation.text =
+            $"IntensitÃ© : {intensiteMax:F1}\n" +
+            $"Voisinage : {rayonVoisinage:F1}\n" +
+            $"Pattern : {indexPattern + 1} / {patterns.Count}";
 
         // Interactions
         tmpInteractions.text =
@@ -542,12 +576,18 @@ public class CreationSimpleTerrain : MonoBehaviour
             "F2 : Changer de fonction\n" +
             "F3 : Changer de HeightMap\n" +
             "F10 : Changer le mode de calcul des normales\n" +
-            "F11 (double click) : Réinitialiser le terrain\n" +
-            "Espace (maintenu) : Afficher les normales\n" +
-            "Alt : Activer / désactiver la rotation automatique du terrain";
+            "F11 (double click) : RÃ©initialiser le terrain\n" +
+            "N (maintenu) : Afficher les normales\n" +
+            "R : Activer / dÃ©sactiver la rotation automatique du terrain" +
+            "Clic Gauche : Ã©lever le terrain\n" +
+            "Clic Droit : creuser le terrain\n" +
+            "Molette + Shift : intensitÃ© de dÃ©formation\n" +
+            "Molette + Ctrl : rayon de voisinage\n" +
+            "Molette + Alt : changer de pattern\n" +
+            "Espace (maintenu) : aperÃ§u de la dÃ©formation\n";
     }
 
-    // Méthode pour déboguer les normales
+    // MÃ©thode pour dÃ©boguer les normales
     private void DebugAllNormals(bool affN_Orientation, bool affN_Eclairage, bool affN_vertices)
     {
         if (affN_Orientation)
@@ -586,6 +626,187 @@ public class CreationSimpleTerrain : MonoBehaviour
                 Debug.DrawRay(transform.position + p_vertices[num_vert], p_normals[num_vert].normalized * 1.0f, Color.red,
                 0.1f, false);
         }
+    }
+
+
+    //TP4 - ex1
+    private void GererMolette()
+    {
+        float molette = Mouse.current.scroll.ReadValue().y;
+        if (Mathf.Approximately(molette, 0f)) return;
+        int sens = molette > 0f ? 1 : -1;
+        var kb = Keyboard.current;
+
+        if (kb.shiftKey.isPressed)
+            intensiteMax = Mathf.Clamp(intensiteMax + sens * pasIntensite, 0.1f, 50f);
+        else if (kb.ctrlKey.isPressed)
+            rayonVoisinage = Mathf.Clamp(rayonVoisinage + sens * pasRayon, 1f, 200f);
+        else if (kb.altKey.isPressed)
+            indexPattern = (indexPattern + sens + patterns.Count) % patterns.Count;
+    }
+
+    private bool TrouverPointVise(out Vector3 centreLocal)
+    {
+        centreLocal = default;
+        Ray ray = p_cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, maskPickingTerrain))
+            return false;
+        centreLocal = transform.InverseTransformPoint(hit.point);
+        return true;
+    }
+
+    private void GererDeformation()
+    {
+        bool gauche = Mouse.current.leftButton.isPressed;
+        bool droit  = Mouse.current.rightButton.isPressed;
+        if (gauche == droit) return;
+        if (!TrouverPointVise(out Vector3 centreLocal)) return;
+        appliquerDeformationPattern(centreLocal, gauche ? 1f : -1f);
+    }
+
+    private void appliquerDeformationPattern(Vector3 centreLocal, float signe)
+    {
+        AnimationCurve courbe = patterns[indexPattern];
+        float delta = signe * intensiteMax * Time.deltaTime;
+
+        CalculerFenetre(centreLocal, out int iMin, out int iMax, out int jMin, out int jMax);
+
+        float rayonCarre = rayonVoisinage * rayonVoisinage;
+
+        // test prÃ©cis dans la fenÃªtre + application de la courbe
+        for (int i = iMin; i <= iMax; i++)
+        {
+            for (int j = jMin; j <= jMax; j++)
+            {
+                int index = i * resolution + j;
+                float dx = p_vertices[index].x - centreLocal.x;
+                float dz = p_vertices[index].z - centreLocal.z;
+                float d2 = dx * dx + dz * dz;
+                if (d2 >= rayonCarre) continue;
+
+                float t = Mathf.Sqrt(d2) / rayonVoisinage;   // 0 au centre, 1 au bord
+                p_vertices[index].y += delta * courbe.Evaluate(t);
+            }
+        }
+        p_mesh.vertices = p_vertices;
+
+        // calcul des normales : uniquement la fenÃªtre + 1 vertex de marge
+        for (int i = Mathf.Max(0, iMin - 1); i <= Mathf.Min(resolution - 1, iMax + 1); i++)
+            for (int j = Mathf.Max(0, jMin - 1); j <= Mathf.Min(resolution - 1, jMax + 1); j++)
+                calculerNormaleVertex((uint)(i * resolution + j));
+        p_mesh.normals = p_normals;
+
+        p_updateCollider = true;
+    }
+
+    // Rebaker un MeshCollider est coÃ»teux : on le limite Ã  10x/s pendant le clic, et on finalise au relÃ¢chement
+    private void MettreAJourColliderSiNecessaire()
+    {
+        if (!p_updateCollider) return;
+        bool boutonEnfonce = Mouse.current.leftButton.isPressed || Mouse.current.rightButton.isPressed;
+        if (boutonEnfonce && Time.time - p_dernierMajCollider < DELAI_MAJ_COLLIDER) return;
+
+        p_meshCollider.sharedMesh = null;
+        p_meshCollider.sharedMesh = p_mesh;
+        p_updateCollider = false;
+        p_dernierMajCollider = Time.time;
+    }
+
+    private void CreerApercu()
+    {
+        p_apercuGO = new GameObject("ApercuDeformation");
+        p_apercuGO.transform.SetParent(transform, false);   // layer 0 : ignorÃ© par le picking
+
+        p_apercuMesh = new Mesh { name = "ApercuDeformation" };
+        p_apercuMesh.MarkDynamic();
+        p_apercuGO.AddComponent<MeshFilter>().sharedMesh = p_apercuMesh;
+
+        if (materielApercu == null)
+            materielApercu = new Material(Shader.Find("Sprites/Default"));
+
+        var mr = p_apercuGO.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = materielApercu;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = false;
+
+        p_apercuGO.SetActive(false);
+    }
+
+    private void CalculerFenetre(Vector3 centre, out int iMin, out int iMax, out int jMin, out int jMax)
+    {
+        int jCentre = Mathf.RoundToInt((centre.x + dimension / 2f) / p_longueurCarre);
+        int iCentre = Mathf.RoundToInt((centre.z + dimension / 2f) / p_longueurCarre);
+        int rayonCases = Mathf.CeilToInt(rayonVoisinage / p_longueurCarre);
+
+        jMin = Mathf.Max(0, jCentre - rayonCases);  jMax = Mathf.Min(resolution - 1, jCentre + rayonCases);
+        iMin = Mathf.Max(0, iCentre - rayonCases);  iMax = Mathf.Min(resolution - 1, iCentre + rayonCases);
+    }
+
+    private void MettreAJourApercu()
+    {
+        Vector3 centre = default;
+        bool actif = Keyboard.current.spaceKey.isPressed && TrouverPointVise(out centre);
+
+        if (p_apercuGO.activeSelf != actif) p_apercuGO.SetActive(actif);
+        if (!actif) return;
+
+        CalculerFenetre(centre, out int iMin, out int iMax, out int jMin, out int jMax);
+        int nombreColonnes = jMax - jMin + 1;
+        int nombreLignes = iMax - iMin + 1;
+
+        // topologie : reconstruite seulement si la taille de la fenÃªtre change
+        if (nombreColonnes != p_apercuNx || nombreLignes != p_apercuNy)
+        {
+            p_apercuNx = nombreColonnes; p_apercuNy = nombreLignes;
+            p_apercuVertices = new Vector3[nombreColonnes * nombreLignes];
+            p_apercuCouleurs = new Color[nombreColonnes * nombreLignes];
+
+            int[] tri = new int[(nombreColonnes - 1) * (nombreLignes - 1) * 6];
+            int t = 0;
+            for (int i = 0; i < nombreLignes - 1; i++)
+            {
+                for (int j = 0; j < nombreColonnes - 1; j++)
+                {
+                    int a = i * nombreColonnes + j;
+                    tri[t++] = a;      tri[t++] = a + nombreColonnes;      tri[t++] = a + 1;
+                    tri[t++] = a + nombreColonnes; tri[t++] = a + nombreColonnes + 1;  tri[t++] = a + 1;
+                }
+            }
+            p_apercuMesh.Clear();
+            p_apercuMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            p_apercuMesh.vertices = p_apercuVertices;
+            p_apercuMesh.triangles = tri;
+        }
+
+        // positions et couleurs : mises Ã  jour Ã  chaque frame
+        AnimationCurve courbe = patterns[indexPattern];
+        float rayonCarre = rayonVoisinage * rayonVoisinage;
+        float signe = Mouse.current.rightButton.isPressed ? -1f : 1f;
+
+        for (int i = iMin; i <= iMax; i++)
+        {
+            for (int j = jMin; j <= jMax; j++)
+            {
+                int k = (i - iMin) * nombreColonnes + (j - jMin);
+                Vector3 v = p_vertices[i * resolution + j];
+                float dx = v.x - centre.x, dz = v.z - centre.z;
+                float d2 = dx * dx + dz * dz;
+
+                bool dedans = d2 < rayonCarre;
+                float poids = dedans ? courbe.Evaluate(Mathf.Sqrt(d2) / rayonVoisinage) : 0f;
+
+                v.y += signe * intensiteMax * poids + decalageApercu;
+                p_apercuVertices[k] = v;
+
+                Color col = Color.Lerp(Color.blue, Color.red, poids);
+                col.a = dedans ? 0.6f : 0f;
+                p_apercuCouleurs[k] = col;
+            }
+        }
+
+        p_apercuMesh.vertices = p_apercuVertices;
+        p_apercuMesh.colors = p_apercuCouleurs;
+        p_apercuMesh.RecalculateBounds();
     }
     #endregion
 }

@@ -230,6 +230,7 @@ MonoBehaviour:
   tmpModeNormales: {fileID: 609674967}
   tmpFPS: {fileID: 2014745396}
   tmpInteractions: {fileID: 1142310772}
+  tmpDeformation: {fileID: 0}
   dimension: 1000
   puissance2Resolution: 8
   resolution: 1
@@ -244,6 +245,14 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 1173e448151fd534eb3e6e88f42048df, type: 3}
   - {fileID: 2800000, guid: 4f74c88d68835234594809be5630877e, type: 3}
   - {fileID: 2800000, guid: 3a374c5993c0abc478b55115770da115, type: 3}
+  patterns: []
+  indexPattern: 0
+  intensiteMax: 10
+  rayonVoisinage: 10
+  pasIntensite: 0.5
+  pasRayon: 1
+  materielApercu: {fileID: 0}
+  decalageApercu: 0.05
 --- !u!64 &205109097
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1494,7 +1503,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2139768723
 RectTransform:
   m_ObjectHideFlags: 0
