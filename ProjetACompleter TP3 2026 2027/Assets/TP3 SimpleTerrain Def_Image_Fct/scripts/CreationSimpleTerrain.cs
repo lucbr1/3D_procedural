@@ -16,7 +16,7 @@ public class CreationSimpleTerrain : MonoBehaviour
 {
     #region Variables
 
-    #region FenÃªtre infos
+    #region Fenêtre infos
     [SerializeField] private GameObject fenetreInfo;
 
     [SerializeField] private TMP_Text tmpVertices;
@@ -28,27 +28,27 @@ public class CreationSimpleTerrain : MonoBehaviour
 
     //TP4 - ex1
     [SerializeField] private TMP_Text tmpDeformation;
-    #endregion
+    [SerializeField] private TMP_Text tmpInteractions2;
 
-    #region ParamÃ©trage
-    [Range(1, 2000)] 
+    //TP4 - ex3
     [SerializeField] private TMP_Text tmpLOD;
     #endregion
 
     #region Paramétrage
+    [Range(1, 2000)] 
     [SerializeField] private float seuilModificationLOD = 0.1f;
     [SerializeField] private float margeActivationLOD = 0.6f;
     [Range(1, 2000)]
     public float dimension = 100;
     [Range(1, 15)]
-    [Tooltip("La resolution sera Ã©levÃ©e Ã  la puissance de cette valeur 2^n " )]
+    [Tooltip("La resolution sera élevée à la puissance de cette valeur 2^n " )]
     public int puissance2Resolution = 1;
     [HideInInspector] public ushort resolution;
 
     [Range(0, 100)]
     public float hauteurMax = 10f;
     [Range(0, 100)]
-    public float rotationSpeed = 20f; // Vitesse de rotation en degrÃ©s par seconde
+    public float rotationSpeed = 20f; // Vitesse de rotation en degrés par seconde
 
     [Tooltip("Choix du mode de calcul des normales ")]
     public enum ModeCalculNormale
@@ -59,7 +59,7 @@ public class CreationSimpleTerrain : MonoBehaviour
     }
     public ModeCalculNormale modeCalculNormale = ModeCalculNormale.Basique;
 
-    [Tooltip("Information sur le mode de gÃ©nÃ©ration :  ")]
+    [Tooltip("Information sur le mode de génération :  ")]
     public enum ChoixModeDeformation
     {
         Fonction,
@@ -72,10 +72,10 @@ public class CreationSimpleTerrain : MonoBehaviour
         Collines,
         Perlin
     }
-    [Tooltip("Choix de la premiÃ¨re fonction Ã  appliquer ")]
+    [Tooltip("Choix de la première fonction à appliquer ")]
     public TypeFonction typeFonction;
 
-    [Tooltip("Choix de la premiÃ¨re HeightMap Ã  appliquer ")] 
+    [Tooltip("Choix de la première HeightMap à appliquer ")] 
     public int numTexture;
     [Tooltip("Les HeightMaps disponibles ")]
     public List<Texture2D>  textures;
@@ -123,24 +123,24 @@ public class CreationSimpleTerrain : MonoBehaviour
     private LayerMask maskPickingTerrain;
 
 
-    #region DÃ©formation
-    [Header("DÃ©formation par pattern")]
+    #region Déformation
+    [Header("Déformation par pattern")]
     public List<AnimationCurve> patterns = new List<AnimationCurve>();
     public int indexPattern = 0;
-    [Range(0.1f, 50f)]  public float intensiteMax = 10f;      // unitÃ©s de hauteur par seconde
-    [Range(1f, 200f)]   public float rayonVoisinage = 10f;   // en unitÃ©s monde (local)
+    [Range(0.1f, 50f)]  public float intensiteMax = 10f;      // unités de hauteur par seconde
+    [Range(1f, 200f)]   public float rayonVoisinage = 10f;   // en unités monde (local)
     public float pasIntensite = 0.5f;
     public float pasRayon = 1f;
 
-    private float p_longueurCarre; // pas de la grille, renseignÃ© Ã  la crÃ©ation du mesh
+    private float p_longueurCarre; // pas de la grille, renseigné à la création du mesh
     private bool  p_updateCollider = false;
     private float p_dernierMajCollider = 0f;
     private const float DELAI_MAJ_COLLIDER = 0.1f;
     #endregion
 
-    #region AperÃ§u de dÃ©formation
-    [Header("AperÃ§u de dÃ©formation")]
-    [Tooltip("MatÃ©riau transparent qui utilise les couleurs de vertex (sinon Sprites/Default)")]
+    #region Aperçu de déformation
+    [Header("Aperçu de déformation")]
+    [Tooltip("Matériau transparent qui utilise les couleurs de vertex (sinon Sprites/Default)")]
     public Material materielApercu;
     public float decalageApercu = 0.05f;
 
@@ -154,8 +154,8 @@ public class CreationSimpleTerrain : MonoBehaviour
     #endregion
 
 #if UNITY_EDITOR
-    // cette mÃ©thode est appelÃ©e la premiÃ¨re fois que le component est ajoutÃ©e l'objet (ou quand reset demandÃ© sur le component depuis l'inspector)
-    // equivalent du RequireComponent mais plus de possibilitÃ©s (plusieurs components) ou intialisation automatique des paramÃ¨tres public 
+    // cette méthode est appelée la première fois que le component est ajoutée l'objet (ou quand reset demandé sur le component depuis l'inspector)
+    // equivalent du RequireComponent mais plus de possibilités (plusieurs components) ou intialisation automatique des paramètres public 
     void Reset()
     {
         if (GetComponent<MeshFilter>() == null)
@@ -168,15 +168,15 @@ public class CreationSimpleTerrain : MonoBehaviour
         {
             foreach (Collider collider in colliders)
                 DestroyImmediate(collider);
-            EditorUtility.DisplayDialog("Un seul MeshCollider", "Tous les collider sont supprimï¿½s ; seuls un meshCollider est associï¿½ au terrain", "OK ! ");
+            EditorUtility.DisplayDialog("Un seul MeshCollider", "Tous les collider sont supprimés ; seuls un meshCollider est associé au terrain", "OK ! ");
         }
         else
-            EditorUtility.DisplayDialog("Le component MeshCollider est nÃ©cessaire Ã  la sÃ©lection", "MeshCollider ajoutÃ© au gameObject ! ", "j'ai compris ! ");
+            EditorUtility.DisplayDialog("Le component MeshCollider est nécessaire à la sélection", "MeshCollider ajouté au gameObject ! ", "j'ai compris ! ");
         p_meshCollider = gameObject.AddComponent<MeshCollider>();
 
         if (GetComponent<MeshRenderer>() == null)
         {
-            EditorUtility.DisplayDialog("Le component MeshRenderer est nÃ©cessaire Ã  la sÃ©lection", "MeshCollider ajoutÃ© au gameObject ! ", "j'ai compris ! ");
+            EditorUtility.DisplayDialog("Le component MeshRenderer est nécessaire à la sélection", "MeshCollider ajouté au gameObject ! ", "j'ai compris ! ");
             gameObject.AddComponent<MeshRenderer>();
         }
     }
@@ -198,7 +198,7 @@ public class CreationSimpleTerrain : MonoBehaviour
 
         if (patterns.Count == 0)
         {
-            patterns.Add(AnimationCurve.Linear(0f, 1f, 1f, 0f));      // cÃ´ne
+            patterns.Add(AnimationCurve.Linear(0f, 1f, 1f, 0f));      // cône
             patterns.Add(AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));   // colline douce
             patterns.Add(new AnimationCurve(                          // plateau
                 new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f)));
@@ -241,7 +241,7 @@ public class CreationSimpleTerrain : MonoBehaviour
             }
         }
 
-        // Gestion du changement de mode de dÃ©formation des fonctions avec la touche F2
+        // Gestion du changement de mode de déformation des fonctions avec la touche F2
         if (Keyboard.current.f2Key.wasPressedThisFrame)
         {
             choixModeDeformation = ChoixModeDeformation.Fonction;
@@ -277,7 +277,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         {
             choixModeDeformation = ChoixModeDeformation.Texture;
             appliquerDeformation_Texture();
-            // l'image'suivante sera utilisÃ©e au prochain appel     
+            // l'image'suivante sera utilisée au prochain appel     
             numTexture = (numTexture + 1) % textures.Count;
         }
 
@@ -300,7 +300,7 @@ public class CreationSimpleTerrain : MonoBehaviour
             }
         }
 
-        // Gestion du double clic sur F11 pour rÃ©initialiser le terrain
+        // Gestion du double clic sur F11 pour réinitialiser le terrain
         if (Keyboard.current.f11Key.wasPressedThisFrame)
         {
             if (Time.time - p_dernierTempsF11 < DELAI_DOUBLE_CLIC)
@@ -366,8 +366,8 @@ public class CreationSimpleTerrain : MonoBehaviour
     }
     #endregion
 
-    #region MÃ©thodes
-    // MÃ©thode pour crÃ©er le maillage du terrain
+    #region Méthodes
+    // Méthode pour créer le maillage du terrain
     private void creerLeMeshTerrain()
     {
         resolution = (ushort)Mathf.Pow(2, puissance2Resolution);
@@ -666,10 +666,10 @@ public class CreationSimpleTerrain : MonoBehaviour
         return distance >= distanceLOD1 * margeActivationLOD;
     }
 
-    // MÃ©thode pour appliquer la dÃ©formation du terrain selon la fonction choisie
+    // Méthode pour appliquer la déformation du terrain selon la fonction choisie
     private void appliquerDeformation_Fonction(Vector3? vertexCentre = null)
     {
-        //position alÃ©atoire du centre de la fonction de dÃ©formation pour les collines
+        //position aléatoire du centre de la fonction de déformation pour les collines
         float xCentre = vertexCentre == null ? Random.Range(0, dimension) : vertexCentre.Value.x;
         float zCentre = vertexCentre == null ? Random.Range(0, dimension) : vertexCentre.Value.z;
         float variationMax = 0f;
@@ -688,7 +688,7 @@ public class CreationSimpleTerrain : MonoBehaviour
                     break;
 
                 case TypeFonction.Collines:
-                    // Gaussienne centrÃ©e au milieu du terrain (x0, z0)
+                    // Gaussienne centrée au milieu du terrain (x0, z0)
                     float distanceAuCentreSqr = (vertex.x - xCentre) * (vertex.x - xCentre) + (vertex.z - zCentre) * (vertex.z - zCentre);
                     float sigma = dimension / 4f; // Largeur de la colline
 
@@ -696,7 +696,7 @@ public class CreationSimpleTerrain : MonoBehaviour
                     break;
 
                 case TypeFonction.Perlin:
-                    // Bruit de Perlin pseudo-alÃ©atoire fluide
+                    // Bruit de Perlin pseudo-aléatoire fluide
                     float scalePerlin = 0.05f;
                     vertex.y = Mathf.PerlinNoise(vertex.x * scalePerlin, vertex.z * scalePerlin) * hauteurMax;
                     break;
@@ -706,7 +706,7 @@ public class CreationSimpleTerrain : MonoBehaviour
             p_vertices[i] = vertex;
         }
 
-        // Mise Ã  jour du maillage
+        // Mise à jour du maillage
         p_mesh.vertices = p_vertices;
         for (int i = 0; i < p_vertices.Length; i++)
         {
@@ -721,17 +721,17 @@ public class CreationSimpleTerrain : MonoBehaviour
         gererActualisationLODs(variationMax);
     }
 
-    // MÃ©thode pour appliquer la dÃ©formation du terrain selon la texture HeightMap choisie
+    // Méthode pour appliquer la déformation du terrain selon la texture HeightMap choisie
     private void appliquerDeformation_Texture()
     {
-        // SÃ©curitÃ© : vÃ©rifier qu'on a bien des textures dans la liste
+        // Sécurité : vérifier qu'on a bien des textures dans la liste
         if (textures == null || textures.Count == 0)
         {
-            Debug.LogWarning("Aucune texture de type HeightMap n'est assignï¿½e dans l'inspecteur !");
+            Debug.LogWarning("Aucune texture de type HeightMap n'est assignée dans l'inspecteur !");
             return;
         }
 
-        // RÃ©cupÃ©ration de la texture courante selon l'index numTexture
+        // Récupération de la texture courante selon l'index numTexture
         Texture2D heightmap = textures[numTexture % textures.Count];
 
         if (heightmap == null) return;
@@ -740,7 +740,7 @@ public class CreationSimpleTerrain : MonoBehaviour
 
         for (int i = 0; i < p_vertices.Length; i++)
         {
-            // 1. On rÃ©cupÃ¨re les coordonnÃ©es UV du vertex courant
+            // 1. On récupère les coordonnées UV du vertex courant
             Vector2 uv = p_uvs[i];
 
             // 2. GetPixelBilinear permet d'obtenir le niveau
@@ -760,7 +760,7 @@ public class CreationSimpleTerrain : MonoBehaviour
             variationMax = Mathf.Max(variationMax, Mathf.Abs(p_vertices[i].y - ancienneHauteur));
         }
 
-        // 5. Mise Ã  jour du maillage et du collider
+        // 5. Mise à jour du maillage et du collider
         p_mesh.vertices = p_vertices;
         for (int i = 0; i < p_vertices.Length; i++)
         {
@@ -775,14 +775,14 @@ public class CreationSimpleTerrain : MonoBehaviour
         gererActualisationLODs(variationMax);
     }
 
-    // MÃ©thode pour calculer la normale d'un vertex en fonction des triangles voisins
+    // Méthode pour calculer la normale d'un vertex en fonction des triangles voisins
     private void calculerNormaleVertex(uint num_Vertex)
     {
         Vector3 vPosition = p_vertices[num_Vertex];
         Vector3 normaleSomme = Vector3.zero;
         float sommePoids = 0f;
 
-        // RÃ©cupÃ©ration directe des triangles voisins prÃ©-calculÃ©s
+        // Récupération directe des triangles voisins pré-calculés
         List<int> trianglesAdjacents = p_trianglesVoisinsParVertex[num_Vertex];
 
         foreach (int idxTriangle in trianglesAdjacents)
@@ -839,7 +839,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
     }
 
-    // MÃ©thode pour prÃ©-calculer le voisinage des triangles pour chaque vertex
+    // Méthode pour pré-calculer le voisinage des triangles pour chaque vertex
     private void bakerVoisinageTriangles()
     {
         // Initialisation du tableau pour chaque vertex
@@ -856,7 +856,7 @@ public class CreationSimpleTerrain : MonoBehaviour
             int vB = p_triangles[idxTriangle + 1];
             int vC = p_triangles[idxTriangle + 2];
 
-            // On enregistre l'index de dÃ©part du triangle (idxTriangle) pour les 3 sommets concernÃ©s
+            // On enregistre l'index de départ du triangle (idxTriangle) pour les 3 sommets concernés
             p_trianglesVoisinsParVertex[vA].Add(idxTriangle);
             p_trianglesVoisinsParVertex[vB].Add(idxTriangle);
             p_trianglesVoisinsParVertex[vC].Add(idxTriangle);
@@ -876,14 +876,14 @@ public class CreationSimpleTerrain : MonoBehaviour
         return lods.Length;
     }
 
-    // MÃ©thode pour afficher les informations dans la fenÃªtre
+    // Méthode pour afficher les informations dans la fenÃªtre
     private void AfficherInfos()
     {
         // Informations sur le maillage
         tmpVertices.text = $"Vertices : {p_vertices.Length:N0}";
         tmpTriangles.text = $"Triangles : {p_triangles.Length / 3:N0}";
 
-        // Poids mÃ©moire approximatif
+        // Poids mémoire approximatif
         int memoireVertices = p_vertices.Length * sizeof(float) * 3;
         int memoireNormales = p_normals.Length * sizeof(float) * 3;
         int memoireUV = p_uvs.Length * sizeof(float) * 2;
@@ -894,18 +894,18 @@ public class CreationSimpleTerrain : MonoBehaviour
                           + memoireUV
                           + memoireTriangles;
 
-        tmpMemoire.text = $"MÃ©moire : {memoireTotale / 1024f:F2} Ko";
+        tmpMemoire.text = $"Mémoire : {memoireTotale / 1024f:F2} Ko";
 
-        // ParamÃ¨tres
+        // Paramètres
         tmpModeNormales.text = $"Mode normales : {modeCalculNormale}";
 
         // FPS
         float fps = 1f / Time.unscaledDeltaTime;
         tmpFPS.text = $"FPS : {fps:F1}";
 
-        // DÃ©formation (TP4 - Ex1)
+        // Déformation (TP4 - Ex1)
         tmpDeformation.text =
-            $"IntensitÃ© : {intensiteMax:F1}\n" +
+            $"Intensité : {intensiteMax:F1}\n" +
             $"Voisinage : {rayonVoisinage:F1}\n" +
             $"Pattern : {indexPattern + 1} / {patterns.Count}";
 
@@ -926,18 +926,20 @@ public class CreationSimpleTerrain : MonoBehaviour
             "F2 : Changer de fonction\n" +
             "F3 : Changer de HeightMap\n" +
             "F10 : Changer le mode de calcul des normales\n" +
-            "F11 (double click) : RÃ©initialiser le terrain\n" +
+            "F11 (double click) : Réinitialiser le terrain\n" +
             "N (maintenu) : Afficher les normales\n" +
-            "R : Activer / dÃ©sactiver la rotation automatique du terrain" +
-            "Clic Gauche : Ã©lever le terrain\n" +
+            "R : Activer / désactiver la rotation automatique";
+
+        tmpInteractions2.text = "Clic Gauche : élever le terrain\n" +
             "Clic Droit : creuser le terrain\n" +
-            "Molette + Shift : intensitÃ© de dÃ©formation\n" +
+            "Molette + Shift : intensité de déformation\n" +
             "Molette + Ctrl : rayon de voisinage\n" +
             "Molette + Alt : changer de pattern\n" +
-            "Espace (maintenu) : aperÃ§u de la dÃ©formation\n";
+            "Espace (maintenu) : aperçu de la déformation\n";
+
     }
 
-    // MÃ©thode pour dÃ©boguer les normales
+    // Méthode pour déboguer les normales
     private void DebugAllNormals(bool affN_Orientation, bool affN_Eclairage, bool affN_vertices)
     {
         if (affN_Orientation)
@@ -1021,7 +1023,7 @@ public class CreationSimpleTerrain : MonoBehaviour
 
         float rayonCarre = rayonVoisinage * rayonVoisinage;
 
-        // test prÃ©cis dans la fenÃªtre + application de la courbe
+        // test précis dans la fenÃªtre + application de la courbe
         for (int i = iMin; i <= iMax; i++)
         {
             for (int j = jMin; j <= jMax; j++)
@@ -1047,7 +1049,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_updateCollider = true;
     }
 
-    // Rebaker un MeshCollider est coÃ»teux : on le limite Ã  10x/s pendant le clic, et on finalise au relÃ¢chement
+    // Rebaker un MeshCollider est coÃ»teux : on le limite à 10x/s pendant le clic, et on finalise au relÃ¢chement
     private void MettreAJourColliderSiNecessaire()
     {
         if (!p_updateCollider) return;
@@ -1063,7 +1065,7 @@ public class CreationSimpleTerrain : MonoBehaviour
     private void CreerApercu()
     {
         p_apercuGO = new GameObject("ApercuDeformation");
-        p_apercuGO.transform.SetParent(transform, false);   // layer 0 : ignorÃ© par le picking
+        p_apercuGO.transform.SetParent(transform, false);   // layer 0 : ignoré par le picking
 
         p_apercuMesh = new Mesh { name = "ApercuDeformation" };
         p_apercuMesh.MarkDynamic();
@@ -1126,7 +1128,7 @@ public class CreationSimpleTerrain : MonoBehaviour
             p_apercuMesh.triangles = tri;
         }
 
-        // positions et couleurs : mises Ã  jour Ã  chaque frame
+        // positions et couleurs : mises à jour à chaque frame
         AnimationCurve courbe = patterns[indexPattern];
         float rayonCarre = rayonVoisinage * rayonVoisinage;
         float signe = Mouse.current.rightButton.isPressed ? -1f : 1f;
