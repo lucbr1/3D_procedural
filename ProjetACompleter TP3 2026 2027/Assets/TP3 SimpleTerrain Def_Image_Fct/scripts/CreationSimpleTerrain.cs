@@ -532,5 +532,45 @@ public class CreationSimpleTerrain : MonoBehaviour
 
         p_apercu.MettreAJour(actif, centre, iMin, iMax, jMin, jMax, signe);
     }
+
+    // Teste si un vertex (écart dx, dz au centre) est dans le voisinage selon la distance choisie.
+    // t : position normalisée sur le rayon (0 au centre, 1 au bord), utilisée par la courbe du pattern.
+    private bool EstDansVoisinage(float dx, float dz, out float t)
+    {
+        float abs_dx = Mathf.Abs(dx);
+        float abs_dz = Mathf.Abs(dz);
+
+        switch (typeDistance)
+        {
+            case TypeDistance.Carree:
+            {
+                float d2 = dx * dx + dz * dz;
+                if (d2 >= rayonVoisinage * rayonVoisinage) { t = 0f; return false; }
+                t = Mathf.Sqrt(d2) / rayonVoisinage;   // sqrt calculé seulement pour les vertices retenus
+                return true;
+            }
+            case TypeDistance.Manhattan:
+            {
+                float d = abs_dx + abs_dz;
+                if (d >= rayonVoisinage) { t = 0f; return false; }
+                t = d / rayonVoisinage;
+                return true;
+            }
+            case TypeDistance.Chebyshev:
+            {
+                float d = Mathf.Max(abs_dx, abs_dz);
+                if (d >= rayonVoisinage) { t = 0f; return false; }
+                t = d / rayonVoisinage;
+                return true;
+            }
+            default: // Euclidienne
+            {
+                float d = Mathf.Sqrt(dx * dx + dz * dz);
+                if (d >= rayonVoisinage) { t = 0f; return false; }
+                t = d / rayonVoisinage;
+                return true;
+            }
+        }
+    }
     #endregion
 }
