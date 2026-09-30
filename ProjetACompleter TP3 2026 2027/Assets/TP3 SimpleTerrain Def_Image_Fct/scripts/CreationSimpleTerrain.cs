@@ -151,6 +151,18 @@ public class CreationSimpleTerrain : MonoBehaviour
     private int        p_apercuNx = -1, p_apercuNy = -1;
     #endregion
 
+    #region Distances (TP4 - Ex2)
+    public enum TypeDistance 
+    { 
+        Euclidienne, 
+        Carree, 
+        Manhattan, 
+        Chebyshev 
+    }
+    [Header("Distance de voisinage")]
+    public TypeDistance typeDistance = TypeDistance.Euclidienne;
+    #endregion
+
     #endregion
 
 #if UNITY_EDITOR
@@ -363,6 +375,11 @@ public class CreationSimpleTerrain : MonoBehaviour
         GererDeformation();
         MettreAJourColliderSiNecessaire();
         MettreAJourApercu();
+
+        //TP4 - ex2
+        // Gestion du changement de distance de voisinage avec la touche D (TP4 - ex2)
+        if (Keyboard.current.dKey.wasPressedThisFrame)
+            typeDistance = (TypeDistance)(((int)typeDistance + 1) % 4);
     }
     #endregion
 
@@ -907,7 +924,8 @@ public class CreationSimpleTerrain : MonoBehaviour
         tmpDeformation.text =
             $"Intensité : {intensiteMax:F1}\n" +
             $"Voisinage : {rayonVoisinage:F1}\n" +
-            $"Pattern : {indexPattern + 1} / {patterns.Count}";
+            $"Pattern : {indexPattern + 1} / {patterns.Count}\n" +
+            $"Distance : {typeDistance}";
 
         if (p_lodGroup == null)
         {
@@ -935,8 +953,8 @@ public class CreationSimpleTerrain : MonoBehaviour
             "Molette + Shift : intensité de déformation\n" +
             "Molette + Ctrl : rayon de voisinage\n" +
             "Molette + Alt : changer de pattern\n" +
-            "Espace (maintenu) : aperçu de la déformation\n";
-
+            "Espace (maintenu) : aperçu de la déformation\n" +
+            "D : changer de distance de voisinage";
     }
 
     // Méthode pour déboguer les normales
@@ -1022,8 +1040,9 @@ public class CreationSimpleTerrain : MonoBehaviour
         CalculerFenetre(centreLocal, out int iMin, out int iMax, out int jMin, out int jMax);
 
         float rayonCarre = rayonVoisinage * rayonVoisinage;
+        float variationMax = 0f;  
 
-        // test précis dans la fenÃªtre + application de la courbe
+        // test précis dans la fenêtre + application de la courbe
         for (int i = iMin; i <= iMax; i++)
         {
             for (int j = jMin; j <= jMax; j++)
@@ -1031,25 +1050,27 @@ public class CreationSimpleTerrain : MonoBehaviour
                 int index = i * resolution + j;
                 float dx = p_vertices[index].x - centreLocal.x;
                 float dz = p_vertices[index].z - centreLocal.z;
-                float d2 = dx * dx + dz * dz;
-                if (d2 >= rayonCarre) continue;
 
-                float t = Mathf.Sqrt(d2) / rayonVoisinage;   // 0 au centre, 1 au bord
-                p_vertices[index].y += delta * courbe.Evaluate(t);
+                if (!EstDansVoisinage(dx, dz, out float t)) continue;
+
+                float deplacement = delta * courbe.Evaluate(t);
+                p_vertices[index].y += deplacement;
+                variationMax = Mathf.Max(variationMax, Mathf.Abs(deplacement));
             }
         }
         p_mesh.vertices = p_vertices;
 
-        // calcul des normales : uniquement la fenÃªtre + 1 vertex de marge
+        // calcul des normales : uniquement la fenêtre + 1 vertex de marge
         for (int i = Mathf.Max(0, iMin - 1); i <= Mathf.Min(resolution - 1, iMax + 1); i++)
             for (int j = Mathf.Max(0, jMin - 1); j <= Mathf.Min(resolution - 1, jMax + 1); j++)
                 calculerNormaleVertex((uint)(i * resolution + j));
         p_mesh.normals = p_normals;
 
         p_updateCollider = true;
+         gererActualisationLODs(variationMax);
     }
 
-    // Rebaker un MeshCollider est coÃ»teux : on le limite à 10x/s pendant le clic, et on finalise au relÃ¢chement
+    // Rebaker un MeshCollider est coûteux : on le limite à 10x/s pendant le clic, et on finalise au relÃ¢chement
     private void MettreAJourColliderSiNecessaire()
     {
         if (!p_updateCollider) return;
@@ -1140,10 +1161,9 @@ public class CreationSimpleTerrain : MonoBehaviour
                 int k = (i - iMin) * nombreColonnes + (j - jMin);
                 Vector3 v = p_vertices[i * resolution + j];
                 float dx = v.x - centre.x, dz = v.z - centre.z;
-                float d2 = dx * dx + dz * dz;
 
-                bool dedans = d2 < rayonCarre;
-                float poids = dedans ? courbe.Evaluate(Mathf.Sqrt(d2) / rayonVoisinage) : 0f;
+                bool dedans = EstDansVoisinage(dx, dz, out float t);
+                float poids = dedans ? courbe.Evaluate(t) : 0f;
 
                 v.y += signe * intensiteMax * poids + decalageApercu;
                 p_apercuVertices[k] = v;
@@ -1157,6 +1177,46 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_apercuMesh.vertices = p_apercuVertices;
         p_apercuMesh.colors = p_apercuCouleurs;
         p_apercuMesh.RecalculateBounds();
+    }
+
+    // Teste si un vertex (écart dx, dz au centre) est dans le voisinage selon la distance choisie.
+    // t : position normalisée sur le rayon (0 au centre, 1 au bord), utilisée par la courbe du pattern.
+    private bool EstDansVoisinage(float dx, float dz, out float t)
+    {
+        float abs_dx = Mathf.Abs(dx);
+        float abs_dz = Mathf.Abs(dz);
+
+        switch (typeDistance)
+        {
+            case TypeDistance.Carree:
+            {
+                float d2 = dx * dx + dz * dz;
+                if (d2 >= rayonVoisinage * rayonVoisinage) { t = 0f; return false; }
+                t = Mathf.Sqrt(d2) / rayonVoisinage;   // sqrt calculé seulement pour les vertices retenus
+                return true;
+            }
+            case TypeDistance.Manhattan:
+            {
+                float d = abs_dx + abs_dz;
+                if (d >= rayonVoisinage) { t = 0f; return false; }
+                t = d / rayonVoisinage;
+                return true;
+            }
+            case TypeDistance.Chebyshev:
+            {
+                float d = Mathf.Max(abs_dx, abs_dz);
+                if (d >= rayonVoisinage) { t = 0f; return false; }
+                t = d / rayonVoisinage;
+                return true;
+            }
+            default: // Euclidienne
+            {
+                float d = Mathf.Sqrt(dx * dx + dz * dz);
+                if (d >= rayonVoisinage) { t = 0f; return false; }
+                t = d / rayonVoisinage;
+                return true;
+            }
+        }
     }
     #endregion
 }
