@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Jobs;
 
 
 [RequireComponent(typeof(MeshFilter))]
@@ -7,9 +9,6 @@ using System.Collections.Generic;
 [RequireComponent(typeof(MeshCollider))]
 
 
-// Représente UN chunk : son mesh, ses normales et les déformations appliquées à ses vertices.
-// Le LOD est géré par LODChunk, l'aperçu par ApercuDeformation.
-// Les entrées clavier/souris et la grille sont gérées par GestionnaireChunks et ses composants.
 public class CreationSimpleTerrain : MonoBehaviour
 {
     #region Variables
@@ -36,6 +35,12 @@ public class CreationSimpleTerrain : MonoBehaviour
 
     private LODChunk p_lod;
     private ApercuDeformation p_apercu;
+
+    #region Jobs TP5
+    // Permet de changer facilement entre les deux versions depuis l'Inspector.
+    public bool utiliserJobs = false;
+    public int lotJobs = 64;
+    #endregion
 
     #region Déformation
     private float p_longueurCarre; // pas de la grille, renseigné à la création du mesh
@@ -255,10 +260,69 @@ public class CreationSimpleTerrain : MonoBehaviour
     #region Normales
     public void RecalculerToutesLesNormales()
     {
+        if (utiliserJobs)
+            RecalculerToutesLesNormales_Parallele();
+        else
+            RecalculerToutesLesNormales_Sequentiel();
+    }
+
+    // Ancienne version conservee pour comparer les performances.
+    private void RecalculerToutesLesNormales_Sequentiel()
+    {
         for (int i = 0; i < p_vertices.Length; i++)
         {
             calculerNormaleVertex((uint)i);
         }
+    }
+
+    private void RecalculerToutesLesNormales_Parallele()
+    {
+        NativeArray<Vector3> verticesNative = new NativeArray<Vector3>(p_vertices, Allocator.TempJob);
+        NativeArray<Vector3> normalesNative = new NativeArray<Vector3>(p_normals.Length, Allocator.TempJob);
+        NativeArray<int> trianglesNative = new NativeArray<int>(p_triangles, Allocator.TempJob);
+        NativeArray<int> debutVoisinsNative = new NativeArray<int>(p_vertices.Length, Allocator.TempJob);
+        NativeArray<int> nombreVoisinsNative = new NativeArray<int>(p_vertices.Length, Allocator.TempJob);
+
+        int nombreVoisins = 0;
+        for (int i = 0; i < p_trianglesVoisinsParVertex.Length; i++)
+        {
+            debutVoisinsNative[i] = nombreVoisins;
+            nombreVoisins += p_trianglesVoisinsParVertex[i].Count;
+            nombreVoisinsNative[i] = p_trianglesVoisinsParVertex[i].Count;
+        }
+
+        NativeArray<int> voisinsNative = new NativeArray<int>(nombreVoisins, Allocator.TempJob);
+        int indexVoisin = 0;
+        for (int i = 0; i < p_trianglesVoisinsParVertex.Length; i++)
+        {
+            for (int j = 0; j < p_trianglesVoisinsParVertex[i].Count; j++)
+            {
+                voisinsNative[indexVoisin++] = p_trianglesVoisinsParVertex[i][j];
+            }
+        }
+
+        CalculerNormalesJob job = new CalculerNormalesJob
+        {
+            vertices_job = verticesNative,
+            triangles_job = trianglesNative,
+            voisins_job = voisinsNative,
+            debutVoisins_job = debutVoisinsNative,
+            nombreVoisins_job = nombreVoisinsNative,
+            normales_job = normalesNative,
+            modeCalculNormale_job = p_gestionnaire.modeCalculNormale
+        };
+
+        JobHandle handle = job.Schedule(p_vertices.Length, lotJobs);
+        handle.Complete();
+
+        normalesNative.CopyTo(p_normals);
+
+        verticesNative.Dispose();
+        normalesNative.Dispose();
+        trianglesNative.Dispose();
+        voisinsNative.Dispose();
+        debutVoisinsNative.Dispose();
+        nombreVoisinsNative.Dispose();
     }
 
     // Méthode pour calculer la normale d'un vertex en fonction des triangles voisins
@@ -370,6 +434,15 @@ public class CreationSimpleTerrain : MonoBehaviour
     // afin que la fonction soit continue d'un chunk à l'autre. Retourne la variation max.
     public float AppliquerFonction(GestionnaireChunks.TypeFonction typeFonction, float xCentre, float zCentre)
     {
+        if (utiliserJobs)
+            return AppliquerFonction_Parallele(typeFonction, xCentre, zCentre);
+
+        return AppliquerFonction_Sequentiel(typeFonction, xCentre, zCentre);
+    }
+
+    // Ancienne version conservee pour comparer les performances.
+    private float AppliquerFonction_Sequentiel(GestionnaireChunks.TypeFonction typeFonction, float xCentre, float zCentre)
+    {
         float variationMax = 0f;
         Vector3 decalage = transform.localPosition;
 
@@ -384,21 +457,17 @@ public class CreationSimpleTerrain : MonoBehaviour
             switch (typeFonction)
             {
                 case GestionnaireChunks.TypeFonction.Sinusoide:
-                    // Fonction globale : Ondulation synchrone sur X et Z
-                    float freqSin = 0.1f;// plus elle est petite, plus les vagues sont larges.
+                    float freqSin = 0.1f;
                     vertex.y = Mathf.Sin(x * freqSin) * Mathf.Cos(z * freqSin) * p_gestionnaire.hauteurMax;
                     break;
 
                 case GestionnaireChunks.TypeFonction.Collines:
-                    // Gaussienne centrée en (xCentre, zCentre)
                     float distanceAuCentreSqr = (x - xCentre) * (x - xCentre) + (z - zCentre) * (z - zCentre);
-                    float sigma = p_gestionnaire.dimension / 4f; // Largeur de la colline
-
+                    float sigma = p_gestionnaire.dimension / 4f;
                     vertex.y = p_gestionnaire.hauteurMax * Mathf.Exp(-distanceAuCentreSqr / (2 * sigma * sigma));
                     break;
 
                 case GestionnaireChunks.TypeFonction.Perlin:
-                    // Bruit de Perlin pseudo-aléatoire fluide
                     float scalePerlin = 0.05f;
                     vertex.y = Mathf.PerlinNoise(x * scalePerlin, z * scalePerlin) * p_gestionnaire.hauteurMax;
                     break;
@@ -408,8 +477,40 @@ public class CreationSimpleTerrain : MonoBehaviour
             p_vertices[i] = vertex;
         }
 
-        RecalculerToutesLesNormales();
+        RecalculerToutesLesNormales_Sequentiel();
+        return variationMax;
+    }
 
+    private float AppliquerFonction_Parallele(GestionnaireChunks.TypeFonction typeFonction, float xCentre, float zCentre)
+    {
+        NativeArray<Vector3> verticesNative = new NativeArray<Vector3>(p_vertices, Allocator.TempJob);
+        NativeArray<float> variationsNative = new NativeArray<float>(p_vertices.Length, Allocator.TempJob);
+
+        AppliquerFonctionJob job = new AppliquerFonctionJob
+        {
+            vertices_job = verticesNative,
+            variations_job = variationsNative,
+            decalage_job = transform.localPosition,
+            hauteurMax_job = p_gestionnaire.hauteurMax,
+            dimension_job = p_gestionnaire.dimension,
+            typeFonction_job = typeFonction,
+            xCentre_job = xCentre,
+            zCentre_job = zCentre
+        };
+
+        JobHandle handle = job.Schedule(verticesNative.Length, Mathf.Max(1, lotJobs));
+        handle.Complete();
+
+        verticesNative.CopyTo(p_vertices);
+
+        float variationMax = 0f;
+        for (int i = 0; i < variationsNative.Length; i++)
+            variationMax = Mathf.Max(variationMax, variationsNative[i]);
+
+        verticesNative.Dispose();
+        variationsNative.Dispose();
+
+        RecalculerToutesLesNormales_Parallele();
         return variationMax;
     }
 
@@ -418,45 +519,122 @@ public class CreationSimpleTerrain : MonoBehaviour
     // Retourne la variation max.
     public float AppliquerTexture(Texture2D heightmap, float xMinGrille, float zMinGrille, float largeurGrille, float longueurGrille)
     {
+        if (utiliserJobs)
+            return AppliquerTexture_Parallele(heightmap, xMinGrille, zMinGrille, largeurGrille, longueurGrille);
+
+        return AppliquerTexture_Sequentiel(heightmap, xMinGrille, zMinGrille, largeurGrille, longueurGrille);
+    }
+
+    // Ancienne version conservee pour comparer les performances.
+    private float AppliquerTexture_Sequentiel(Texture2D heightmap, float xMinGrille, float zMinGrille, float largeurGrille, float longueurGrille)
+    {
         float variationMax = 0f;
         Vector3 decalage = transform.localPosition;
 
         for (int i = 0; i < p_vertices.Length; i++)
         {
-            // 1. Coordonnées UV du vertex dans l'ensemble de la grille (0 -> 1 sur toute la grille)
             float u = (p_vertices[i].x + decalage.x - xMinGrille) / largeurGrille;
             float v = (p_vertices[i].z + decalage.z - zMinGrille) / longueurGrille;
 
-            // 2. GetPixelBilinear permet d'obtenir le niveau
-            // de gris à partir des coordonnées UV
             float niveauDeGris = heightmap.GetPixelBilinear(u, v).grayscale;
-
-            // 3. On conserve l'ancienne hauteur
             float ancienneHauteur = p_vertices[i].y;
-
-            // 4. L'altitude Y devient proportionnelle au niveau de gris
             p_vertices[i].y = niveauDeGris * p_gestionnaire.hauteurMax;
-
             variationMax = Mathf.Max(variationMax, Mathf.Abs(p_vertices[i].y - ancienneHauteur));
         }
 
-        RecalculerToutesLesNormales();
+        RecalculerToutesLesNormales_Sequentiel();
+        return variationMax;
+    }
 
+    private float AppliquerTexture_Parallele(Texture2D heightmap, float xMinGrille, float zMinGrille, float largeurGrille, float longueurGrille)
+    {
+        Color[] pixels = heightmap.GetPixels();
+        NativeArray<Color> pixelsNative = new NativeArray<Color>(pixels, Allocator.TempJob);
+        NativeArray<Vector3> verticesNative = new NativeArray<Vector3>(p_vertices, Allocator.TempJob);
+        NativeArray<float> variationsNative = new NativeArray<float>(p_vertices.Length, Allocator.TempJob);
+
+        GenerationTerrainTextureJob job = new GenerationTerrainTextureJob
+        {
+            pixels_job = pixelsNative,
+            largeurImage_job = heightmap.width,
+            hauteurImage_job = heightmap.height,
+            vertices_job = verticesNative,
+            variations_job = variationsNative,
+            decalage_job = transform.localPosition,
+            xMinGrille_job = xMinGrille,
+            zMinGrille_job = zMinGrille,
+            largeurGrille_job = largeurGrille,
+            longueurGrille_job = longueurGrille,
+            hauteurMax_job = p_gestionnaire.hauteurMax
+        };
+
+        JobHandle handle = job.Schedule(verticesNative.Length, Mathf.Max(1, lotJobs));
+        handle.Complete();
+
+        verticesNative.CopyTo(p_vertices);
+
+        float variationMax = 0f;
+        for (int i = 0; i < variationsNative.Length; i++)
+            variationMax = Mathf.Max(variationMax, variationsNative[i]);
+
+        pixelsNative.Dispose();
+        verticesNative.Dispose();
+        variationsNative.Dispose();
+
+        RecalculerToutesLesNormales_Parallele();
         return variationMax;
     }
 
     // Remet le chunk à plat. Retourne la variation max.
     public float Reinitialiser()
     {
+        if (utiliserJobs)
+            return Reinitialiser_Parallele();
+
+        return Reinitialiser_Sequentiel();
+    }
+
+    // Ancienne version conservee pour comparer les performances.
+    private float Reinitialiser_Sequentiel()
+    {
         float variationMax = 0f;
 
         for (int i = 0; i < p_vertices.Length; i++)
         {
             variationMax = Mathf.Max(variationMax, Mathf.Abs(p_vertices[i].y));
-
             p_vertices[i].y = 0;
             p_normals[i] = Vector3.up;
         }
+
+        return variationMax;
+    }
+
+    private float Reinitialiser_Parallele()
+    {
+        NativeArray<Vector3> verticesNative = new NativeArray<Vector3>(p_vertices, Allocator.TempJob);
+        NativeArray<Vector3> normalesNative = new NativeArray<Vector3>(p_normals, Allocator.TempJob);
+        NativeArray<float> variationsNative = new NativeArray<float>(p_vertices.Length, Allocator.TempJob);
+
+        ReinitialiserTerrainJob job = new ReinitialiserTerrainJob
+        {
+            vertices_job = verticesNative,
+            normales_job = normalesNative,
+            variations_job = variationsNative
+        };
+
+        JobHandle handle = job.Schedule(verticesNative.Length, Mathf.Max(1, lotJobs));
+        handle.Complete();
+
+        verticesNative.CopyTo(p_vertices);
+        normalesNative.CopyTo(p_normals);
+
+        float variationMax = 0f;
+        for (int i = 0; i < variationsNative.Length; i++)
+            variationMax = Mathf.Max(variationMax, variationsNative[i]);
+
+        verticesNative.Dispose();
+        normalesNative.Dispose();
+        variationsNative.Dispose();
 
         return variationMax;
     }
@@ -533,4 +711,196 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_apercu.MettreAJour(actif, centre, iMin, iMax, jMin, jMax, signe);
     }
     #endregion
+
+    #region Jobs
+
+    public struct ReinitialiserTerrainJob : IJobParallelFor
+    {
+        public NativeArray<Vector3> vertices_job;
+        public NativeArray<Vector3> normales_job;
+        public NativeArray<float> variations_job;
+
+        public void Execute(int index)
+        {
+            Vector3 vertex = vertices_job[index];
+            variations_job[index] = Mathf.Abs(vertex.y);
+            vertex.y = 0f;
+            vertices_job[index] = vertex;
+            normales_job[index] = Vector3.up;
+        }
+    }
+
+    public struct AppliquerFonctionJob : IJobParallelFor
+    {
+        public NativeArray<Vector3> vertices_job;
+        public NativeArray<float> variations_job;
+        public Vector3 decalage_job;
+        public float hauteurMax_job;
+        public float dimension_job;
+        public GestionnaireChunks.TypeFonction typeFonction_job;
+        public float xCentre_job;
+        public float zCentre_job;
+
+        public void Execute(int index)
+        {
+            Vector3 vertex = vertices_job[index];
+            float ancienneHauteur = vertex.y;
+            float x = vertex.x + decalage_job.x;
+            float z = vertex.z + decalage_job.z;
+
+            switch (typeFonction_job)
+            {
+                case GestionnaireChunks.TypeFonction.Sinusoide:
+                    float freqSin = 0.1f;
+                    vertex.y = Mathf.Sin(x * freqSin) * Mathf.Cos(z * freqSin) * hauteurMax_job;
+                    break;
+
+                case GestionnaireChunks.TypeFonction.Collines:
+                    float distanceAuCentreSqr = (x - xCentre_job) * (x - xCentre_job) + (z - zCentre_job) * (z - zCentre_job);
+                    float sigma = dimension_job / 4f;
+                    vertex.y = hauteurMax_job * Mathf.Exp(-distanceAuCentreSqr / (2 * sigma * sigma));
+                    break;
+
+                case GestionnaireChunks.TypeFonction.Perlin:
+                    float scalePerlin = 0.05f;
+                    vertex.y = Mathf.PerlinNoise(x * scalePerlin, z * scalePerlin) * hauteurMax_job;
+                    break;
+            }
+
+            variations_job[index] = Mathf.Abs(vertex.y - ancienneHauteur);
+            vertices_job[index] = vertex;
+        }
+    }
+
+    public struct GenerationTerrainTextureJob : IJobParallelFor
+    {
+        [ReadOnly]
+        public NativeArray<Color> pixels_job;
+        public int largeurImage_job;
+        public int hauteurImage_job;
+        public NativeArray<Vector3> vertices_job;
+        public NativeArray<float> variations_job;
+        public Vector3 decalage_job;
+        public float xMinGrille_job;
+        public float zMinGrille_job;
+        public float largeurGrille_job;
+        public float longueurGrille_job;
+        public float hauteurMax_job;
+
+        public void Execute(int index)
+        {
+            Vector3 vertex = vertices_job[index];
+            float ancienneHauteur = vertex.y;
+
+            float u = (vertex.x + decalage_job.x - xMinGrille_job) / largeurGrille_job;
+            float v = (vertex.z + decalage_job.z - zMinGrille_job) / longueurGrille_job;
+
+            u = Mathf.Clamp01(u);
+            v = Mathf.Clamp01(v);
+
+            float x = u * (largeurImage_job - 1);
+            float y = v * (hauteurImage_job - 1);
+
+            int x0 = Mathf.FloorToInt(x);
+            int y0 = Mathf.FloorToInt(y);
+            int x1 = Mathf.Min(x0 + 1, largeurImage_job - 1);
+            int y1 = Mathf.Min(y0 + 1, hauteurImage_job - 1);
+
+            float tx = x - x0;
+            float ty = y - y0;
+
+            Color c00 = pixels_job[y0 * largeurImage_job + x0];
+            Color c10 = pixels_job[y0 * largeurImage_job + x1];
+            Color c01 = pixels_job[y1 * largeurImage_job + x0];
+            Color c11 = pixels_job[y1 * largeurImage_job + x1];
+
+            Color c0 = Color.Lerp(c00, c10, tx);
+            Color c1 = Color.Lerp(c01, c11, tx);
+            Color couleur = Color.Lerp(c0, c1, ty);
+
+            vertex.y = couleur.grayscale * hauteurMax_job;
+            variations_job[index] = Mathf.Abs(vertex.y - ancienneHauteur);
+            vertices_job[index] = vertex;
+        }
+    }
+
+    public struct CalculerNormalesJob : IJobParallelFor
+    {
+        [ReadOnly]
+        public NativeArray<Vector3> vertices_job;
+        [ReadOnly]
+        public NativeArray<int> triangles_job;
+        [ReadOnly]
+        public NativeArray<int> voisins_job;
+        [ReadOnly]
+        public NativeArray<int> debutVoisins_job;
+        [ReadOnly]
+        public NativeArray<int> nombreVoisins_job;
+        public NativeArray<Vector3> normales_job;
+        public GestionnaireChunks.ModeCalculNormale modeCalculNormale_job;
+
+        public void Execute(int index)
+        {
+            Vector3 vPosition = vertices_job[index];
+            Vector3 normaleSomme = Vector3.zero;
+            float sommePoids = 0f;
+
+            int debut = debutVoisins_job[index];
+            int nombre = nombreVoisins_job[index];
+
+            for (int i = 0; i < nombre; i++)
+            {
+                int idxTriangle = voisins_job[debut + i];
+                int idxA = triangles_job[idxTriangle];
+                int idxB = triangles_job[idxTriangle + 1];
+                int idxC = triangles_job[idxTriangle + 2];
+
+                Vector3 A = vertices_job[idxA];
+                Vector3 B = vertices_job[idxB];
+                Vector3 C = vertices_job[idxC];
+
+                Vector3 u = B - A;
+                Vector3 v = C - A;
+                Vector3 normaleTriangle = Vector3.Cross(u, v);
+
+                float doubleSurface = normaleTriangle.magnitude;
+                if (doubleSurface < 0.00001f) continue;
+
+                Vector3 normaleTriangleNorm = normaleTriangle / doubleSurface;
+
+                switch (modeCalculNormale_job)
+                {
+                    case GestionnaireChunks.ModeCalculNormale.Basique:
+                        normaleSomme += normaleTriangleNorm;
+                        sommePoids += 1.0f;
+                        break;
+
+                    case GestionnaireChunks.ModeCalculNormale.PondereeSurface:
+                        float surface = doubleSurface * 0.5f;
+                        normaleSomme += normaleTriangleNorm * surface;
+                        sommePoids += surface;
+                        break;
+
+                    case GestionnaireChunks.ModeCalculNormale.PondereeAngle:
+                        Vector3 pV = vPosition;
+                        Vector3 p1 = (idxA == index) ? B : A;
+                        Vector3 p2 = (idxC == index) ? B : C;
+
+                        Vector3 vec1 = (p1 - pV).normalized;
+                        Vector3 vec2 = (p2 - pV).normalized;
+                        float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(vec1, vec2), -1.0f, 1.0f));
+
+                        normaleSomme += normaleTriangleNorm * angle;
+                        sommePoids += angle;
+                        break;
+                }
+            }
+
+            if (sommePoids > 0f)
+                normales_job[index] = (normaleSomme / sommePoids).normalized;
+        }
+    }
+
+    #endregion
+
 }

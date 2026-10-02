@@ -10,6 +10,14 @@ public class GestionnaireChunks : MonoBehaviour
     #region Variables
 
     #region Paramétrage
+
+    [Header("TP5 - Jobs")]
+    [Tooltip("False = version séquentielle, True = version Jobs")]
+    public bool utiliserJobs = false;
+
+    [Tooltip("Taille des lots utilisés par les IJobParallelFor")]
+    [Range(1, 1024)]
+    public int lotJobs = 64;
     [Range(1, 2000)]
     public float seuilModificationLOD = 0.1f;
     public float margeActivationLOD = 0.6f;
@@ -129,6 +137,15 @@ public class GestionnaireChunks : MonoBehaviour
         return true;
     }
     #endregion
+
+    public void AppliquerConfigurationJobs()
+    {
+        foreach (CreationSimpleTerrain chunk in p_chunks.Values)
+        {
+            chunk.utiliserJobs = utiliserJobs;
+            chunk.lotJobs = lotJobs;
+        }
+    }
 
     #region Unity events
     void Awake()

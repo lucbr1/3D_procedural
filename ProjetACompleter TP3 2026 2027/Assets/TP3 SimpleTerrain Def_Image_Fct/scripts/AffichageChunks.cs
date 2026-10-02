@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using UnityEngine.InputSystem;
 
 
-// Affichage / debug : rotation automatique (R), normales (N), mise en évidence des chunks (C)
 [RequireComponent(typeof(GestionnaireChunks))]
 public class AffichageChunks : MonoBehaviour
 {

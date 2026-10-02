@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
+using System.Diagnostics;
 
 
 // Entrées de déformation (F2, F3, F10, F11, clics, molette, espace) appliquées à toute la grille de chunks
@@ -26,6 +27,13 @@ public class DeformationChunks : MonoBehaviour
     private float p_dernierTempsF11 = 0f;
 
     private const float DELAI_DOUBLE_CLIC = 0.5f;
+
+    [Header("TP5 - Comparaison des performances")]
+    [Tooltip("Affiche le temps des fonctions TP5 dans la Console")]
+    public bool afficherTempsTP5 = true;
+
+    [Tooltip("F8 : bascule entre la version séquentielle et la version Jobs")]
+    public bool basculerAvecF8 = true;
     #endregion
 
     #region Unity events
@@ -92,6 +100,14 @@ public class DeformationChunks : MonoBehaviour
             }
         }
 
+        // TP5 - changement rapide entre séquentiel et parallèle
+        if (basculerAvecF8 && Keyboard.current.f8Key.wasPressedThisFrame)
+        {
+            p_gestionnaire.utiliserJobs = !p_gestionnaire.utiliserJobs;
+            p_gestionnaire.AppliquerConfigurationJobs();
+            UnityEngine.Debug.Log("TP5 - Mode : " + (p_gestionnaire.utiliserJobs ? "PARALLELE (Jobs)" : "SEQUENTIEL"));
+        }
+
         //TP4 - ex1
 
         GererMolette();
@@ -110,6 +126,8 @@ public class DeformationChunks : MonoBehaviour
     // Méthode pour appliquer la déformation du terrain selon la fonction choisie
     private void appliquerDeformation_Fonction(Vector3? centre = null)
     {
+        Stopwatch chrono = Stopwatch.StartNew();
+
         float dimension = p_gestionnaire.dimension;
 
         //position aléatoire du centre de la fonction de déformation pour les collines (sur toute la grille)
@@ -126,15 +144,20 @@ public class DeformationChunks : MonoBehaviour
 
         for (int i = 0; i < liste.Count; i++)
             liste[i].FinaliserDeformation(variations[i]);
+
+        chrono.Stop();
+        AfficherTempsTP5("AppliquerFonction", chrono.Elapsed.TotalMilliseconds, liste.Count);
     }
 
     // Méthode pour appliquer la déformation du terrain selon la texture HeightMap choisie
     private void appliquerDeformation_Texture()
     {
+        Stopwatch chrono = Stopwatch.StartNew();
+
         // Sécurité : vérifier qu'on a bien des textures dans la liste
         if (textures == null || textures.Count == 0)
         {
-            Debug.LogWarning("Aucune texture de type HeightMap n'est assignée dans l'inspecteur !");
+            UnityEngine.Debug.LogWarning("Aucune texture de type HeightMap n'est assignée dans l'inspecteur !");
             return;
         }
 
@@ -160,10 +183,15 @@ public class DeformationChunks : MonoBehaviour
 
         for (int i = 0; i < liste.Count; i++)
             liste[i].FinaliserDeformation(variations[i]);
+
+        chrono.Stop();
+        AfficherTempsTP5("AppliquerTexture", chrono.Elapsed.TotalMilliseconds, liste.Count);
     }
 
     private void changerModeCalculNormales()
     {
+        Stopwatch chrono = Stopwatch.StartNew();
+
         p_gestionnaire.modeCalculNormale = (GestionnaireChunks.ModeCalculNormale)(((int)p_gestionnaire.modeCalculNormale + 1) % 3);
 
         List<CreationSimpleTerrain> liste = p_gestionnaire.ObtenirListeChunks();
@@ -175,15 +203,23 @@ public class DeformationChunks : MonoBehaviour
 
         foreach (CreationSimpleTerrain chunk in liste)
             chunk.FinaliserNormales();
+
+        chrono.Stop();
+        AfficherTempsTP5("RecalculerToutesLesNormales", chrono.Elapsed.TotalMilliseconds, liste.Count);
     }
 
     private void reinitialiserTerrain()
     {
+        Stopwatch chrono = Stopwatch.StartNew();
+
         foreach (CreationSimpleTerrain chunk in p_gestionnaire.Chunks)
         {
             float variationMax = chunk.Reinitialiser();
             chunk.FinaliserDeformation(variationMax);
         }
+
+        chrono.Stop();
+        AfficherTempsTP5("Reinitialiser", chrono.Elapsed.TotalMilliseconds, p_gestionnaire.NombreChunks);
     }
 
     //TP4 - ex1
@@ -251,6 +287,21 @@ public class DeformationChunks : MonoBehaviour
 
         foreach (CreationSimpleTerrain chunk in p_gestionnaire.Chunks)
             chunk.MettreAJourColliderSiNecessaire(boutonEnfonce);
+    }
+
+    private void AfficherTempsTP5(string nomFonction, double tempsMs, int nombreChunks)
+    {
+        if (!afficherTempsTP5) return;
+
+        string mode = p_gestionnaire.utiliserJobs ? "PARALLELE (Jobs)" : "SEQUENTIEL";
+        double moyenne = nombreChunks > 0 ? tempsMs / nombreChunks : 0.0;
+
+        UnityEngine.Debug.Log(
+            "TP5 - " + nomFonction +
+            " | " + mode +
+            " | " + tempsMs.ToString("F3") + " ms" +
+            " | " + nombreChunks + " chunk(s)" +
+            " | moyenne : " + moyenne.ToString("F3") + " ms/chunk");
     }
 
     private void MettreAJourApercu()

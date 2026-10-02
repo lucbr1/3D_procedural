@@ -1,7 +1,6 @@
 using UnityEngine;
 
 
-// Aperçu (maillage transparent coloré) de la déformation sur la partie du voisinage qui touche un chunk
 public class ApercuDeformation
 {
     private CreationSimpleTerrain p_chunk;
