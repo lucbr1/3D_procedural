@@ -2,22 +2,21 @@ using UnityEngine;
 using System.Collections.Generic;
 
 
-// Configuration partagée + grille de chunks (création, extension, raccord des bords).
-// À placer sur un GameObject VIDE, avec les composants :
-// DeformationChunks, ExtensionChunks, AffichageChunks et InfosChunks.
 public class GestionnaireChunks : MonoBehaviour
 {
     #region Variables
 
     #region Paramétrage
 
-    [Header("TP5 - Jobs")]
-    [Tooltip("False = version séquentielle, True = version Jobs")]
+    [Header("Jobs")]
+    [Tooltip("False = version séquentielle, True = version Jobs avec Burst")]
     public bool utiliserJobs = false;
 
     [Tooltip("Taille des lots utilisés par les IJobParallelFor")]
     [Range(1, 1024)]
     public int lotJobs = 64;
+
+    [Header("Paramètres du terrain")]
     [Range(1, 2000)]
     public float seuilModificationLOD = 0.1f;
     public float margeActivationLOD = 0.6f;
@@ -28,8 +27,8 @@ public class GestionnaireChunks : MonoBehaviour
     public int puissance2Resolution = 1;
     [HideInInspector] public ushort resolution;
 
-    [Range(0, 100)]
-    public float hauteurMax = 10f;
+    [Range(0, 1000)]
+    public float hauteurMax = 100f;
 
     [Tooltip("Choix du mode de calcul des normales ")]
     public enum ModeCalculNormale
@@ -60,12 +59,11 @@ public class GestionnaireChunks : MonoBehaviour
     [Header("Déformation par pattern")]
     public List<AnimationCurve> patterns = new List<AnimationCurve>();
     public int indexPattern = 0;
-    [Range(0.1f, 50f)] public float intensiteMax = 10f;      // unités de hauteur par seconde
+    [Range(0.1f, 50f)] public float intensiteMax = 10f;     // unités de hauteur par seconde
     [Range(1f, 200f)] public float rayonVoisinage = 10f;   // en unités monde (local)
     public float pasIntensite = 0.5f;
     public float pasRayon = 1f;
 
-    //TP4 - ex2
     public enum TypeDistance
     {
         Euclidienne,
@@ -106,10 +104,8 @@ public class GestionnaireChunks : MonoBehaviour
     public int NombreLignes { get { return p_zMax - p_zMin + 1; } }
     public int NombreChunks { get { return p_chunks.Count; } }
 
-    // Parcours direct (ne pas créer de chunk pendant le parcours)
     public Dictionary<Vector2Int, CreationSimpleTerrain>.ValueCollection Chunks { get { return p_chunks.Values; } }
 
-    // Copie de la liste des chunks
     public List<CreationSimpleTerrain> ObtenirListeChunks()
     {
         return new List<CreationSimpleTerrain>(p_chunks.Values);
@@ -120,13 +116,11 @@ public class GestionnaireChunks : MonoBehaviour
         return p_chunks.TryGetValue(coord, out chunk);
     }
 
-    // Centre de la grille dans le repère du gestionnaire
     public Vector3 CentreGrille()
     {
         return new Vector3((p_xMin + p_xMax) * 0.5f * dimension, 0f, (p_zMin + p_zMax) * 0.5f * dimension);
     }
 
-    // Point visé au centre de l'écran, exprimé dans le repère du gestionnaire (commun à tous les chunks)
     public bool TrouverPointVise(out Vector3 centreGrille)
     {
         centreGrille = default;
@@ -138,6 +132,7 @@ public class GestionnaireChunks : MonoBehaviour
     }
     #endregion
 
+    //passer les paramètres de jobs à tous les chunks existants
     public void AppliquerConfigurationJobs()
     {
         foreach (CreationSimpleTerrain chunk in p_chunks.Values)
@@ -173,13 +168,12 @@ public class GestionnaireChunks : MonoBehaviour
 
     void Start()
     {
-        // Premier chunk au centre de la grille
+        // créer le chunk initial au centre de la grille
         CreerChunk(Vector2Int.zero);
     }
     #endregion
 
     #region Création / extension
-    // Création d'un chunk aux coordonnées de grille indiquées
     private CreationSimpleTerrain CreerChunk(Vector2Int coord)
     {
         GameObject go = new GameObject("Chunk");
@@ -196,7 +190,6 @@ public class GestionnaireChunks : MonoBehaviour
         return chunk;
     }
 
-    // Etend la grille d'une ligne / colonne de chunks dans la direction demandée
     public void EtendreTerrain(Vector2Int dir)
     {
         int x0 = p_xMin, x1 = p_xMax, z0 = p_zMin, z1 = p_zMax;
@@ -212,7 +205,7 @@ public class GestionnaireChunks : MonoBehaviour
     }
     #endregion
 
-    #region Distance de voisinage (TP4 - ex2)
+    #region Distance de voisinage
     // Teste si un vertex (écart dx, dz au centre) est dans le voisinage selon la distance choisie.
     // t : position normalisée sur le rayon (0 au centre, 1 au bord), utilisée par la courbe du pattern.
     public bool EstDansVoisinage(float dx, float dz, out float t)
@@ -324,7 +317,7 @@ public class GestionnaireChunks : MonoBehaviour
         }
     }
 
-    // Raccorde les bords communs des chunks de la liste (chaque frontière n'est traitée qu'une fois)
+    // raccorde tous les chunks d'une liste entre eux (pour harmoniser les normales après une déformation)
     public void HarmoniserChunks(List<CreationSimpleTerrain> chunks)
     {
         foreach (CreationSimpleTerrain chunk in chunks)

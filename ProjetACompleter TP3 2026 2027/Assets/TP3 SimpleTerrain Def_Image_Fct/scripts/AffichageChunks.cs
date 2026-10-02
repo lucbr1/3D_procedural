@@ -9,7 +9,7 @@ public class AffichageChunks : MonoBehaviour
 {
     #region Variables
     [Range(0, 100)]
-    public float rotationSpeed = 20f; // Vitesse de rotation en degrés par seconde
+    public float rotationSpeed = 20f;
 
     [Tooltip("Matériaux utilisés par la touche C (si vide : couleurs générées automatiquement)")]
     public List<Material> materielsChunks = new List<Material>();
@@ -31,7 +31,7 @@ public class AffichageChunks : MonoBehaviour
 
     void Update()
     {
-        // Gestion de la rotation automatique du terrain avec la touche r
+        // Rotation de la caméra autour du centre de la grille avec la touche R
         if (Keyboard.current.rKey.wasPressedThisFrame)
         {
             isRotating = !isRotating;
@@ -46,12 +46,11 @@ public class AffichageChunks : MonoBehaviour
         }
         if (isRotating)
         {
-            // rotation autour du centre de la grille de chunks
             Transform t = p_gestionnaire.transform;
             t.RotateAround(t.TransformPoint(p_gestionnaire.CentreGrille()), Vector3.up, rotationSpeed * Time.deltaTime);
         }
 
-        // Affichage des normales si la touche n est maintenue
+        // Affichage des normales avec la touche N
         if (Keyboard.current.nKey.isPressed)
         {
             foreach (CreationSimpleTerrain chunk in p_gestionnaire.Chunks)
@@ -85,7 +84,6 @@ public class AffichageChunks : MonoBehaviour
         return p_materielsEvidence[index];
     }
 
-    // Un matériau différent par chunk pendant quelques secondes
     private IEnumerator MettreEnEvidenceChunks()
     {
         int numChunk = 0;

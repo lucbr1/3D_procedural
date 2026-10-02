@@ -1,7 +1,6 @@
 using UnityEngine;
 
 
-// Gère les deux niveaux de LOD (maillages de résolution inférieure) d'un chunk
 public class LODChunk
 {
     #region Variables
@@ -16,11 +15,9 @@ public class LODChunk
     private Mesh p_meshLOD1;
     private Mesh p_meshLOD2;
 
-    // Résolutions des différents LOD
     private int p_resolutionLOD1;
     private int p_resolutionLOD2;
 
-    // Objets utilisés pour les MeshRenderer des LOD
     private GameObject p_objetLOD1;
     private GameObject p_objetLOD2;
 
@@ -72,25 +69,18 @@ public class LODChunk
         p_objetLOD1.transform.SetParent(p_chunk.transform, false);
         p_objetLOD2.transform.SetParent(p_chunk.transform, false);
 
-        // MeshFilter LOD1
-        MeshFilter meshFilterLOD1 = p_objetLOD1.AddComponent<MeshFilter>();
-        meshFilterLOD1.mesh = p_meshLOD1;
-
-        // MeshFilter LOD2
-        MeshFilter meshFilterLOD2 = p_objetLOD2.AddComponent<MeshFilter>();
-        meshFilterLOD2.mesh = p_meshLOD2;
-
-        // MeshRenderer LOD1
-        p_rendererLOD1 = p_objetLOD1.AddComponent<MeshRenderer>();
-
-        // MeshRenderer LOD2
-        p_rendererLOD2 = p_objetLOD2.AddComponent<MeshRenderer>();
-
-        // On utilise le même matériau que le terrain principal
         MeshRenderer rendererPrincipal = p_chunk.GetComponent<MeshRenderer>();
 
+
+        MeshFilter meshFilterLOD1 = p_objetLOD1.AddComponent<MeshFilter>();
+        meshFilterLOD1.mesh = p_meshLOD1;
+        p_rendererLOD1 = p_objetLOD1.AddComponent<MeshRenderer>();
         p_rendererLOD1.sharedMaterials = rendererPrincipal.sharedMaterials;
 
+
+        MeshFilter meshFilterLOD2 = p_objetLOD2.AddComponent<MeshFilter>();
+        meshFilterLOD2.mesh = p_meshLOD2;
+        p_rendererLOD2 = p_objetLOD2.AddComponent<MeshRenderer>();
         p_rendererLOD2.sharedMaterials = rendererPrincipal.sharedMaterials;
 
         // Création du LODGroup
@@ -100,7 +90,7 @@ public class LODChunk
 
         lods[0] = new LOD(0.8f, new MeshRenderer[] { rendererPrincipal });
         lods[1] = new LOD(0.6f, new MeshRenderer[] { p_rendererLOD1 });
-        lods[2] = new LOD(0.4f, new MeshRenderer[] { p_rendererLOD2 });
+        lods[2] = new LOD(0.2f, new MeshRenderer[] { p_rendererLOD2 });
 
         p_lodGroup.SetLODs(lods);
         p_lodGroup.RecalculateBounds();
@@ -109,7 +99,7 @@ public class LODChunk
         mettreAJourLesLODs();
     }
 
-    // Création d'un mesh LOD à partir du terrain principal
+    //création d'un mesh LOD à partir du terrain principal
     private Mesh creerMeshLOD(int resolutionLOD)
     {
         Vector3[] vertices = p_chunk.Vertices;
@@ -162,13 +152,11 @@ public class LODChunk
         return meshLOD;
     }
 
-    // Retourne l'index du vertex du terrain principal
-    // correspondant au vertex du LOD
     private int trouverIndexVertexPrincipal(int xLOD, int zLOD, int resolutionLOD)
     {
         // On utilise les coordonnées normalisées.
         // Le premier et le dernier vertex du LOD correspondent exactement
-        // au premier et au dernier vertex du terrain principal.
+        // au premier et au dernier vertex du terrain principal
         int xPrincipal = Mathf.RoundToInt((float)xLOD / (resolutionLOD - 1) * (p_resolution - 1));
         int zPrincipal = Mathf.RoundToInt((float)zLOD / (resolutionLOD - 1) * (p_resolution - 1));
         return xPrincipal * p_resolution + zPrincipal;
@@ -176,7 +164,6 @@ public class LODChunk
     #endregion
 
     #region Mise à jour
-    // Met à jour les deux meshes LOD
     private void mettreAJourLesLODs()
     {
         if (p_meshLOD1 == null || p_meshLOD2 == null)
@@ -192,7 +179,7 @@ public class LODChunk
             p_lodGroup.RecalculateBounds();
     }
 
-    // Mise à jour d'un seul LOD
+
     private void mettreAJourUnLOD(Mesh meshLOD, Vector3[] verticesLOD, int resolutionLOD)
     {
         Vector3[] vertices = p_chunk.Vertices;
@@ -206,7 +193,7 @@ public class LODChunk
                 int indexPrincipal = trouverIndexVertexPrincipal(i, j, resolutionLOD);
 
                 // On ne modifie le vertex que si
-                // sa hauteur a réellement changé.
+                // sa hauteur a réellement changé
                 if (Mathf.Abs(verticesLOD[indexLOD].y - vertices[indexPrincipal].y) > 0.0001f)
                 {
                     verticesLOD[indexLOD] = vertices[indexPrincipal];
@@ -214,8 +201,7 @@ public class LODChunk
             }
         }
 
-        // Les normales sont récupérées depuis
-        // le terrain principal.
+        //les normales sont récupérées depuis le terrain principal
         Vector3[] normalsLOD = new Vector3[verticesLOD.Length];
 
         for (int i = 0; i < resolutionLOD; i++)
@@ -233,8 +219,7 @@ public class LODChunk
         meshLOD.RecalculateBounds();
     }
 
-    // Vérifie si le terrain est suffisamment proche
-    // pour justifier la mise à jour des LOD
+    //vérifie si le terrain est suffisamment proche pour justifier la mise à jour des LOD
     public void VerifierActualisation()
     {
         if (!p_lodsAActualiser)
@@ -247,15 +232,12 @@ public class LODChunk
             mettreAJourLesLODs();
     }
 
-    // Détermine si la modification du terrain
-    // est suffisamment importante pour actualiser les LOD
     public void GererActualisation(float variationMax)
     {
         if (p_meshLOD1 == null || p_meshLOD2 == null)
             return;
 
-        // Modification trop faible :
-        // les LOD ne sont pas actualisés.
+        // si la variation maximale de hauteur est inférieure au seuil, on ne met pas à jour les LOD
         if (variationMax < p_gestionnaire.seuilModificationLOD)
             return;
 
@@ -265,7 +247,7 @@ public class LODChunk
             p_lodsAActualiser = true;
     }
 
-    // Demande une actualisation dès que le terrain sera assez proche (ex : nouvelles normales)
+    // demande une actualisation dès que le terrain sera assez proche
     public void MarquerAActualiser()
     {
         if (p_meshLOD1 != null || p_meshLOD2 != null)
@@ -286,13 +268,12 @@ public class LODChunk
 
         float distance = Vector3.Distance(p_cam.transform.position, transform.position);
 
-        // on anticipe : on met à jour un peu avant que le LOD 1 s'active
+        //on met à jour un peu avant que le LOD 1 s'active
         return distance >= distanceLOD1 * p_gestionnaire.margeActivationLOD;
     }
     #endregion
 
     #region Infos / matériau
-    // Retourne l'index du LOD affiché (3 = hors champ, -1 = pas de LOD sur ce chunk)
     public int ObtenirLODActuel()
     {
         if (p_lodGroup == null || p_cam == null) return -1;

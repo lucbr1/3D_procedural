@@ -1,7 +1,8 @@
-using UnityEngine;
 using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine;
 
 
 [RequireComponent(typeof(MeshFilter))]
@@ -275,6 +276,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
     }
 
+
     private void RecalculerToutesLesNormales_Parallele()
     {
         NativeArray<Vector3> verticesNative = new NativeArray<Vector3>(p_vertices, Allocator.TempJob);
@@ -481,6 +483,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         return variationMax;
     }
 
+
     private float AppliquerFonction_Parallele(GestionnaireChunks.TypeFonction typeFonction, float xCentre, float zCentre)
     {
         NativeArray<Vector3> verticesNative = new NativeArray<Vector3>(p_vertices, Allocator.TempJob);
@@ -546,6 +549,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         return variationMax;
     }
 
+
     private float AppliquerTexture_Parallele(Texture2D heightmap, float xMinGrille, float zMinGrille, float largeurGrille, float longueurGrille)
     {
         Color[] pixels = heightmap.GetPixels();
@@ -608,6 +612,7 @@ public class CreationSimpleTerrain : MonoBehaviour
 
         return variationMax;
     }
+
 
     private float Reinitialiser_Parallele()
     {
@@ -714,6 +719,7 @@ public class CreationSimpleTerrain : MonoBehaviour
 
     #region Jobs
 
+    [BurstCompile]
     public struct ReinitialiserTerrainJob : IJobParallelFor
     {
         public NativeArray<Vector3> vertices_job;
@@ -730,6 +736,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
     }
 
+    [BurstCompile]
     public struct AppliquerFonctionJob : IJobParallelFor
     {
         public NativeArray<Vector3> vertices_job;
@@ -772,6 +779,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
     }
 
+    [BurstCompile]
     public struct GenerationTerrainTextureJob : IJobParallelFor
     {
         [ReadOnly]
@@ -824,6 +832,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
     }
 
+    [BurstCompile]
     public struct CalculerNormalesJob : IJobParallelFor
     {
         [ReadOnly]

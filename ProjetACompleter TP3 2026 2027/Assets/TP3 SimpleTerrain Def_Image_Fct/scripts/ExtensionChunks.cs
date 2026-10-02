@@ -2,8 +2,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 
-// Ajout automatique de chunks quand la caméra s'approche d'un bord :
-// plan fantôme d'avertissement, validation en s'approchant, annulation avec Echap
 [RequireComponent(typeof(GestionnaireChunks))]
 public class ExtensionChunks : MonoBehaviour
 {
@@ -15,7 +13,6 @@ public class ExtensionChunks : MonoBehaviour
 
     private GestionnaireChunks p_gestionnaire;
 
-    // un plan fantôme et un état d'annulation par direction (mêmes index que GestionnaireChunks.directions)
     private GameObject[] p_fantomes = new GameObject[4];
     private bool[] p_annulee = new bool[4];
     #endregion
@@ -38,8 +35,7 @@ public class ExtensionChunks : MonoBehaviour
     #endregion
 
     #region Méthodes
-    // Distance de la caméra au bord de la grille dans la direction dir
-    // (float.MaxValue si la caméra n'est pas en face de ce bord)
+    //distance de la caméra au bord du chunk dans la direction donnée
     private float DistanceAuBord(Vector2Int dir)
     {
         float dimension = p_gestionnaire.dimension;
@@ -60,7 +56,6 @@ public class ExtensionChunks : MonoBehaviour
         return dir.y > 0 ? zMaxM - c.z : c.z - zMinM;
     }
 
-    // Le chunk est proposé (plan fantôme) puis créé quand la caméra s'approche du bord. Echap annule.
     private void GererExtensionAutomatique()
     {
         for (int d = 0; d < 4; d++)
@@ -68,20 +63,17 @@ public class ExtensionChunks : MonoBehaviour
             Vector2Int dir = p_gestionnaire.directions[d];
             float distance = DistanceAuBord(dir);
 
-            // on réarme la direction quand la caméra s'éloigne
             if (distance > distanceFantome)
                 p_annulee[d] = false;
 
             bool proche = distance < distanceFantome && !p_annulee[d];
 
-            // Echap : on refuse la création du chunk prévisualisé
             if (proche && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 p_annulee[d] = true;
                 proche = false;
             }
 
-            // assez proche : le chunk est validé
             if (proche && distance < distanceCreation)
             {
                 p_gestionnaire.EtendreTerrain(dir);
@@ -101,9 +93,9 @@ public class ExtensionChunks : MonoBehaviour
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Quad);
             go.name = "Fantome_" + d;
-            Destroy(go.GetComponent<Collider>());   // le plan fantôme ne doit pas gêner le picking
+            Destroy(go.GetComponent<Collider>());   
             go.transform.SetParent(p_gestionnaire.transform, false);
-            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // le quad est couché sur le plan XZ
+            go.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   
             go.GetComponent<MeshRenderer>().sharedMaterial = materielFantome;
 
             go.SetActive(false);
@@ -111,7 +103,6 @@ public class ExtensionChunks : MonoBehaviour
         }
     }
 
-    // Place le plan fantôme sur la ligne / colonne de chunks qui serait créée
     private void MettreAJourFantome(int d, bool visible)
     {
         GameObject go = p_fantomes[d];

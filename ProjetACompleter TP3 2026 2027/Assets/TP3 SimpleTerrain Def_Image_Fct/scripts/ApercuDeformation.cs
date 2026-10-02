@@ -18,7 +18,7 @@ public class ApercuDeformation
         p_gestionnaire = gestionnaire;
 
         p_apercuGO = new GameObject("ApercuDeformation");
-        p_apercuGO.transform.SetParent(chunk.transform, false);   // layer 0 : ignoré par le picking
+        p_apercuGO.transform.SetParent(chunk.transform, false);
 
         p_apercuMesh = new Mesh { name = "ApercuDeformation" };
         p_apercuMesh.MarkDynamic();
@@ -36,7 +36,6 @@ public class ApercuDeformation
         p_apercuGO.SetActive(false);
     }
 
-    // centre : point visé dans le repère du chunk ; i/j Min/Max : fenêtre de vertices concernée
     public void MettreAJour(bool actif, Vector3 centre, int iMin, int iMax, int jMin, int jMax, float signe)
     {
         if (p_apercuGO.activeSelf != actif) p_apercuGO.SetActive(actif);
@@ -48,7 +47,6 @@ public class ApercuDeformation
         int nombreColonnes = jMax - jMin + 1;
         int nombreLignes = iMax - iMin + 1;
 
-        // topologie : reconstruite seulement si la taille de la fenêtre change
         if (nombreColonnes != p_apercuNx || nombreLignes != p_apercuNy)
         {
             p_apercuNx = nombreColonnes; p_apercuNy = nombreLignes;
@@ -72,7 +70,6 @@ public class ApercuDeformation
             p_apercuMesh.triangles = tri;
         }
 
-        // positions et couleurs : mises à jour à chaque frame
         AnimationCurve courbe = p_gestionnaire.patterns[p_gestionnaire.indexPattern];
 
         for (int i = iMin; i <= iMax; i++)
