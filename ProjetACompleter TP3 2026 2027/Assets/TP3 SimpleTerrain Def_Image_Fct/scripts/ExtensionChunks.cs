@@ -6,9 +6,9 @@ using UnityEngine.InputSystem;
 public class ExtensionChunks : MonoBehaviour
 {
     #region Variables
-    [Tooltip("Distance au bord à partir de laquelle le plan fantôme apparait")]
+    [Tooltip("Distance au bord ï¿½ partir de laquelle le plan fantï¿½me apparait")]
     public float distanceFantome = 30f;
-    [Tooltip("Distance au bord à partir de laquelle le chunk est créé")]
+    [Tooltip("Distance au bord ï¿½ partir de laquelle le chunk est crï¿½ï¿½")]
     public float distanceCreation = 10f;
 
     private GestionnaireChunks p_gestionnaire;
@@ -30,12 +30,14 @@ public class ExtensionChunks : MonoBehaviour
 
     void Update()
     {
+        if (p_gestionnaire.affichageInfos) return;
+        
         GererExtensionAutomatique();
     }
     #endregion
 
-    #region Méthodes
-    //distance de la caméra au bord du chunk dans la direction donnée
+    #region Mï¿½thodes
+    //distance de la camï¿½ra au bord du chunk dans la direction donnï¿½e
     private float DistanceAuBord(Vector2Int dir)
     {
         float dimension = p_gestionnaire.dimension;

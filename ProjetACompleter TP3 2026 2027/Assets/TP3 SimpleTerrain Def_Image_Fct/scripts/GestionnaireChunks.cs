@@ -6,24 +6,24 @@ public class GestionnaireChunks : MonoBehaviour
 {
     #region Variables
 
-    #region Paramétrage
+    #region Paramï¿½trage
 
     [Header("Jobs")]
-    [Tooltip("False = version séquentielle, True = version Jobs avec Burst")]
+    [Tooltip("False = version sï¿½quentielle, True = version Jobs avec Burst")]
     public bool utiliserJobs = false;
 
-    [Tooltip("Taille des lots utilisés par les IJobParallelFor")]
+    [Tooltip("Taille des lots utilisï¿½s par les IJobParallelFor")]
     [Range(1, 1024)]
     public int lotJobs = 64;
 
-    [Header("Paramètres du terrain")]
+    [Header("Paramï¿½tres du terrain")]
     [Range(1, 2000)]
     public float seuilModificationLOD = 0.1f;
     public float margeActivationLOD = 0.6f;
     [Range(1, 2000)]
     public float dimension = 100;   // dimension d'UN chunk
     [Range(1, 15)]
-    [Tooltip("La resolution sera élevée à la puissance de cette valeur 2^n ")]
+    [Tooltip("La resolution sera ï¿½levï¿½e ï¿½ la puissance de cette valeur 2^n ")]
     public int puissance2Resolution = 1;
     [HideInInspector] public ushort resolution;
 
@@ -51,16 +51,16 @@ public class GestionnaireChunks : MonoBehaviour
         Perlin
     }
 
-    [Tooltip("Matériau du terrain (repris de l'ancien MeshRenderer)")]
+    [Tooltip("Matï¿½riau du terrain (repris de l'ancien MeshRenderer)")]
     public Material materielTerrain;
     #endregion
 
-    #region Déformation par pattern (lus par les chunks et l'aperçu)
-    [Header("Déformation par pattern")]
+    #region Dï¿½formation par pattern (lus par les chunks et l'aperï¿½u)
+    [Header("Dï¿½formation par pattern")]
     public List<AnimationCurve> patterns = new List<AnimationCurve>();
     public int indexPattern = 0;
-    [Range(0.1f, 50f)] public float intensiteMax = 10f;     // unités de hauteur par seconde
-    [Range(1f, 200f)] public float rayonVoisinage = 10f;   // en unités monde (local)
+    [Range(0.1f, 50f)] public float intensiteMax = 10f;     // unitï¿½s de hauteur par seconde
+    [Range(1f, 200f)] public float rayonVoisinage = 10f;   // en unitï¿½s monde (local)
     public float pasIntensite = 0.5f;
     public float pasRayon = 1f;
 
@@ -74,9 +74,8 @@ public class GestionnaireChunks : MonoBehaviour
     [Header("Distance de voisinage")]
     public TypeDistance typeDistance = TypeDistance.Euclidienne;
 
-    [Header("Aperçu de déformation")]
-    [Tooltip("Matériau transparent qui utilise les couleurs de vertex (sinon Sprites/Default)")]
-    public Material materielApercu;
+    [Header("Aperï¿½u de dï¿½formation")]
+    [Tooltip("Matï¿½riau transparent qui utilise les couleurs de vertex (sinon Sprites/Default)")]
     public float decalageApercu = 0.05f;
     #endregion
 
@@ -84,17 +83,19 @@ public class GestionnaireChunks : MonoBehaviour
     [HideInInspector] public Camera cam;
     [HideInInspector] public LayerMask maskPickingTerrain;
 
+    [HideInInspector] public bool affichageInfos = false;
+
     // droite, gauche, haut (+z), bas (-z)
     public readonly Vector2Int[] directions = { Vector2Int.right, Vector2Int.left, Vector2Int.up, Vector2Int.down };
 
-    // Grille de chunks : coordonnées entières (x, z), bornes de la grille rectangulaire
+    // Grille de chunks : coordonnï¿½es entiï¿½res (x, z), bornes de la grille rectangulaire
     private Dictionary<Vector2Int, CreationSimpleTerrain> p_chunks = new Dictionary<Vector2Int, CreationSimpleTerrain>();
     private int p_xMin = 0, p_xMax = 0, p_zMin = 0, p_zMax = 0;
     #endregion
 
     #endregion
 
-    #region Accès à la grille
+    #region Accï¿½s ï¿½ la grille
     public int XMin { get { return p_xMin; } }
     public int XMax { get { return p_xMax; } }
     public int ZMin { get { return p_zMin; } }
@@ -132,7 +133,7 @@ public class GestionnaireChunks : MonoBehaviour
     }
     #endregion
 
-    //passer les paramètres de jobs à tous les chunks existants
+    //passer les paramï¿½tres de jobs ï¿½ tous les chunks existants
     public void AppliquerConfigurationJobs()
     {
         foreach (CreationSimpleTerrain chunk in p_chunks.Values)
@@ -157,7 +158,7 @@ public class GestionnaireChunks : MonoBehaviour
 
         if (patterns.Count == 0)
         {
-            patterns.Add(AnimationCurve.Linear(0f, 1f, 1f, 0f));      // cône
+            patterns.Add(AnimationCurve.Linear(0f, 1f, 1f, 0f));      // cï¿½ne
             patterns.Add(AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));   // colline douce
             patterns.Add(new AnimationCurve(                          // plateau
                 new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f)));
@@ -168,12 +169,12 @@ public class GestionnaireChunks : MonoBehaviour
 
     void Start()
     {
-        // créer le chunk initial au centre de la grille
+        // crï¿½er le chunk initial au centre de la grille
         CreerChunk(Vector2Int.zero);
     }
     #endregion
 
-    #region Création / extension
+    #region Crï¿½ation / extension
     private CreationSimpleTerrain CreerChunk(Vector2Int coord)
     {
         GameObject go = new GameObject("Chunk");
@@ -206,8 +207,8 @@ public class GestionnaireChunks : MonoBehaviour
     #endregion
 
     #region Distance de voisinage
-    // Teste si un vertex (écart dx, dz au centre) est dans le voisinage selon la distance choisie.
-    // t : position normalisée sur le rayon (0 au centre, 1 au bord), utilisée par la courbe du pattern.
+    // Teste si un vertex (ï¿½cart dx, dz au centre) est dans le voisinage selon la distance choisie.
+    // t : position normalisï¿½e sur le rayon (0 au centre, 1 au bord), utilisï¿½e par la courbe du pattern.
     public bool EstDansVoisinage(float dx, float dz, out float t)
     {
         float abs_dx = Mathf.Abs(dx);
@@ -219,7 +220,7 @@ public class GestionnaireChunks : MonoBehaviour
                 {
                     float d2 = dx * dx + dz * dz;
                     if (d2 >= rayonVoisinage * rayonVoisinage) { t = 0f; return false; }
-                    t = Mathf.Sqrt(d2) / rayonVoisinage;   // sqrt calculé seulement pour les vertices retenus
+                    t = Mathf.Sqrt(d2) / rayonVoisinage;   // sqrt calculï¿½ seulement pour les vertices retenus
                     return true;
                 }
             case TypeDistance.Manhattan:
@@ -247,8 +248,8 @@ public class GestionnaireChunks : MonoBehaviour
     }
     #endregion
 
-    #region Continuité entre chunks
-    // Le nouveau chunk recopie la hauteur des bords partagés avec ses voisins existants, puis les normales sont lissées
+    #region Continuitï¿½ entre chunks
+    // Le nouveau chunk recopie la hauteur des bords partagï¿½s avec ses voisins existants, puis les normales sont lissï¿½es
     private void RaccorderAuxVoisins(CreationSimpleTerrain chunk, Vector2Int coord)
     {
         List<CreationSimpleTerrain> concernes = new List<CreationSimpleTerrain>();
@@ -258,7 +259,7 @@ public class GestionnaireChunks : MonoBehaviour
         {
             if (!p_chunks.TryGetValue(coord + dir, out CreationSimpleTerrain voisin)) continue;
 
-            // le voisin est la source, le nouveau chunk est à (-dir) du voisin
+            // le voisin est la source, le nouveau chunk est ï¿½ (-dir) du voisin
             RaccorderBord(voisin, chunk, -dir, false);
             concernes.Add(voisin);
         }
@@ -273,8 +274,8 @@ public class GestionnaireChunks : MonoBehaviour
             concernes[i].FinaliserDeformation(0f);
     }
 
-    // Parcourt les vertices communs à deux chunks contigus (b est le voisin de a dans la direction dir)
-    // moyenne = true : hauteur et normale moyennées ; false : b recopie la hauteur de a
+    // Parcourt les vertices communs ï¿½ deux chunks contigus (b est le voisin de a dans la direction dir)
+    // moyenne = true : hauteur et normale moyennï¿½es ; false : b recopie la hauteur de a
     private void RaccorderBord(CreationSimpleTerrain a, CreationSimpleTerrain b, Vector2Int dir, bool moyenne)
     {
         Vector3[] vA = a.Vertices;
@@ -289,13 +290,13 @@ public class GestionnaireChunks : MonoBehaviour
 
             if (dir.x != 0)
             {
-                // bord en x : j = res-1 d'un côté, j = 0 de l'autre
+                // bord en x : j = res-1 d'un cï¿½tï¿½, j = 0 de l'autre
                 indexA = k * res + (dir.x > 0 ? res - 1 : 0);
                 indexB = k * res + (dir.x > 0 ? 0 : res - 1);
             }
             else
             {
-                // bord en z : i = res-1 d'un côté, i = 0 de l'autre
+                // bord en z : i = res-1 d'un cï¿½tï¿½, i = 0 de l'autre
                 indexA = (dir.y > 0 ? res - 1 : 0) * res + k;
                 indexB = (dir.y > 0 ? 0 : res - 1) * res + k;
             }
@@ -317,7 +318,7 @@ public class GestionnaireChunks : MonoBehaviour
         }
     }
 
-    // raccorde tous les chunks d'une liste entre eux (pour harmoniser les normales après une déformation)
+    // raccorde tous les chunks d'une liste entre eux (pour harmoniser les normales aprï¿½s une dï¿½formation)
     public void HarmoniserChunks(List<CreationSimpleTerrain> chunks)
     {
         foreach (CreationSimpleTerrain chunk in chunks)

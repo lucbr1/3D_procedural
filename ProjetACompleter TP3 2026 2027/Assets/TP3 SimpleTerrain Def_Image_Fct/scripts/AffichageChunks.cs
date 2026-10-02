@@ -11,7 +11,7 @@ public class AffichageChunks : MonoBehaviour
     [Range(0, 100)]
     public float rotationSpeed = 20f;
 
-    [Tooltip("Matériaux utilisés par la touche C (si vide : couleurs générées automatiquement)")]
+    [Tooltip("Matï¿½riaux utilisï¿½s par la touche C (si vide : couleurs gï¿½nï¿½rï¿½es automatiquement)")]
     public List<Material> materielsChunks = new List<Material>();
     public float dureeEvidence = 3f;
 
@@ -31,7 +31,9 @@ public class AffichageChunks : MonoBehaviour
 
     void Update()
     {
-        // Rotation de la caméra autour du centre de la grille avec la touche R
+        if (p_gestionnaire.affichageInfos) return;
+
+        // Rotation de la camï¿½ra autour du centre de la grille avec la touche R
         if (Keyboard.current.rKey.wasPressedThisFrame)
         {
             isRotating = !isRotating;
@@ -57,7 +59,7 @@ public class AffichageChunks : MonoBehaviour
                 chunk.DebugAllNormals(true, true, true);
         }
 
-        // Mise en évidence des chunks avec la touche c
+        // Mise en ï¿½vidence des chunks avec la touche c
         if (Keyboard.current.cKey.wasPressedThisFrame)
         {
             if (p_coroutineEvidence != null)
@@ -68,13 +70,13 @@ public class AffichageChunks : MonoBehaviour
     }
     #endregion
 
-    #region Méthodes
+    #region Mï¿½thodes
     private Material ObtenirMaterielEvidence(int index)
     {
         if (materielsChunks != null && materielsChunks.Count > 0)
             return materielsChunks[index % materielsChunks.Count];
 
-        // Sinon on génère une couleur par chunk à partir du matériau du terrain
+        // Sinon on gï¿½nï¿½re une couleur par chunk ï¿½ partir du matï¿½riau du terrain
         while (p_materielsEvidence.Count <= index)
         {
             Material materiel = new Material(p_gestionnaire.materielTerrain);

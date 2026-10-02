@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 using TMPro;
 
 
-// Fenêtre d'informations (F1)
+// Fenï¿½tre d'informations (F1)
 [RequireComponent(typeof(GestionnaireChunks))]
 public class InfosChunks : MonoBehaviour
 {
@@ -38,6 +38,8 @@ public class InfosChunks : MonoBehaviour
 
             fenetreInfo.SetActive(afficher);
 
+            p_gestionnaire.affichageInfos = afficher;
+
             if (afficher)
             {
                 AfficherInfos();
@@ -46,7 +48,7 @@ public class InfosChunks : MonoBehaviour
     }
     #endregion
 
-    #region Méthodes
+    #region Mï¿½thodes
     private void AfficherInfos()
     {
         CreationSimpleTerrain reference = null;
@@ -77,7 +79,7 @@ public class InfosChunks : MonoBehaviour
 
         tmpVertices.text = $"Vertices : {reference.NombreVertices:N0} / chunk ({verticesTotal:N0} au total)";
         tmpTriangles.text = $"Triangles : {reference.NombreTriangles:N0} / chunk ({trianglesTotal:N0} au total)";
-        tmpMemoire.text = $"Mémoire : {reference.PoidsMemoire / 1024f:F2} Ko / chunk ({memoireTotale / 1024f:F2} Ko au total)";
+        tmpMemoire.text = $"MÃ©moire : {reference.PoidsMemoire / 1024f:F2} Ko / chunk ({memoireTotale / 1024f:F2} Ko au total)";
 
         tmpModeNormales.text = $"Mode normales : {p_gestionnaire.modeCalculNormale}";
 
@@ -85,20 +87,20 @@ public class InfosChunks : MonoBehaviour
         tmpFPS.text = $"FPS : {fps:F1}";
 
         tmpDeformation.text =
-            $"Intensité : {p_gestionnaire.intensiteMax:F1}\n" +
+            $"Mode de calcul de la distance : {p_gestionnaire.typeDistance}\n\n" +
             $"Voisinage : {p_gestionnaire.rayonVoisinage:F1}\n" +
             $"Pattern : {p_gestionnaire.indexPattern + 1} / {p_gestionnaire.patterns.Count}\n" +
-            $"Distance : {p_gestionnaire.typeDistance}";
+            $"IntensitÃ© : {p_gestionnaire.intensiteMax:F1}";
 
         if (!lodActif)
         {
-            tmpLOD.text = "LOD : désactivé (puissance < 6)";
+            tmpLOD.text = "LOD : dÃ©sactivÃ© (puissance < 6)";
         }
         else
         {
             int[] resolutions = reference.ResolutionsLOD;
-            tmpLOD.text = $"LOD : activé ({resolutions[0]} / {resolutions[1]} / {resolutions[2]})\n" +
-                          $"Chunks affichés : LOD 0 : {compteurLOD[0]} | LOD 1 : {compteurLOD[1]} | LOD 2 : {compteurLOD[2]} | hors champ : {compteurLOD[3]}";
+            tmpLOD.text = $"LOD : activÃ© ({resolutions[0]} / {resolutions[1]} / {resolutions[2]})\n" +
+                          $"Chunks affichÃ©s : LOD 0 : {compteurLOD[0]} | LOD 1 : {compteurLOD[1]} | LOD 2 : {compteurLOD[2]} | hors champ : {compteurLOD[3]}";
         }
 
         // Interactions
@@ -106,22 +108,22 @@ public class InfosChunks : MonoBehaviour
             "F1 : Afficher / masquer les informations\n" +
             "F2 : Changer de fonction\n" +
             "F3 : Changer de HeightMap\n" +
-            "F8 : Activer / désactiver l'utilisation de Jobs\n" +
+            "F8 : Activer / dÃ©sactiver l'utilisation de Jobs\n" +
             "F10 : Changer le mode de calcul des normales\n" +
-            "F11 (double click) : Réinitialiser le terrain\n" +
+            "F11 (double click) : RÃ©initialiser le terrain\n" +
             "N (maintenu) : Afficher les normales\n" +
-            "R : Activer / désactiver la rotation automatique\n" +
-            "C : Mettre en évidence les chunks\n" ;
+            "R : Activer / dÃ©sactiver la rotation automatique\n" +
+            "C : Mettre en Ã©vidence les chunks\n" ;
 
-        tmpInteractions2.text = "Clic Gauche : élever le terrain\n" +
+        tmpInteractions2.text = "Clic Gauche : Ã©lever le terrain\n" +
             "Clic Droit : creuser le terrain\n" +
-            "Molette + Shift : intensité de déformation\n" +
+            "Molette + Shift : intensitÃ© de dÃ©formation\n" +
             "Molette + Ctrl : rayon de voisinage\n" +
             "Molette + Alt : changer de pattern\n" +
-            "Espace (maintenu) : aperçu de la déformation\n" +
+            "Espace (maintenu) : aperÃ§u de la dÃ©formation\n" +
             "D : changer de distance de voisinage\n" +
-            "Déplacement aux bordures : ajout de chunks\n"+
-            "Echap : Annuler la création du chunk proposé";
+            "DÃ©placement aux bordures : ajout de chunks\n"+
+            "Echap : Annuler la crÃ©ation du chunk proposÃ©";
     }
     #endregion
 }

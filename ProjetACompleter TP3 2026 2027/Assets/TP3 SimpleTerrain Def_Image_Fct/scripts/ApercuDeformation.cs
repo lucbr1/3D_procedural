@@ -23,13 +23,9 @@ public class ApercuDeformation
         p_apercuMesh = new Mesh { name = "ApercuDeformation" };
         p_apercuMesh.MarkDynamic();
         p_apercuGO.AddComponent<MeshFilter>().sharedMesh = p_apercuMesh;
-
-        Material materielApercu = gestionnaire.materielApercu;
-        if (materielApercu == null)
-            materielApercu = new Material(Shader.Find("Sprites/Default"));
-
+        
         var mr = p_apercuGO.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = materielApercu;
+        mr.sharedMaterial = new Material(Shader.Find("Sprites/Default"));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
 

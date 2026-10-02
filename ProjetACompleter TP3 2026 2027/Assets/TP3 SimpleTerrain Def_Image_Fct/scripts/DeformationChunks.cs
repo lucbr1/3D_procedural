@@ -8,13 +8,13 @@ using System.Diagnostics;
 public class DeformationChunks : MonoBehaviour
 {
     #region Variables
-    [Tooltip("Information sur le mode de génération :  ")]
+    [Tooltip("Information sur le mode de gï¿½nï¿½ration :  ")]
     public GestionnaireChunks.ChoixModeDeformation choixModeDeformation;
 
-    [Tooltip("Choix de la première fonction à appliquer ")]
+    [Tooltip("Choix de la premiï¿½re fonction ï¿½ appliquer ")]
     public GestionnaireChunks.TypeFonction typeFonction;
 
-    [Tooltip("Choix de la première HeightMap à appliquer ")]
+    [Tooltip("Choix de la premiï¿½re HeightMap ï¿½ appliquer ")]
     public int numTexture;
     [Tooltip("Les HeightMaps disponibles ")]
     public List<Texture2D> textures;
@@ -31,7 +31,7 @@ public class DeformationChunks : MonoBehaviour
     [Tooltip("Affiche le temps des fonctions dans la Console")]
     public bool afficherTemps = true;
 
-    [Tooltip("F8 : bascule entre la version séquentielle et la version Jobs")]
+    [Tooltip("F8 : bascule entre la version sï¿½quentielle et la version Jobs")]
     public bool basculerAvecF8 = true;
     #endregion
 
@@ -43,38 +43,40 @@ public class DeformationChunks : MonoBehaviour
 
     void Update()
     {
-        // Gestion du changement de mode de déformation des fonctions avec la touche F2
+        if (p_gestionnaire.affichageInfos) return;
+        
+        // Gestion du changement de mode de dï¿½formation des fonctions avec la touche F2
         if (Keyboard.current.f2Key.wasPressedThisFrame)
         {
             choixModeDeformation = GestionnaireChunks.ChoixModeDeformation.Fonction;
             appliquerDeformation_Fonction();
-            // la fonction suivante sera utilisée au prochain appel
+            // la fonction suivante sera utilisï¿½e au prochain appel
             typeFonction = (GestionnaireChunks.TypeFonction)(((int)typeFonction + 1) % 3);
         }
 
-        // Gestion de la déformation du terrain avec le clic gauche de la souris
+        // Gestion de la dï¿½formation du terrain avec le clic gauche de la souris
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             if (choixModeDeformation == GestionnaireChunks.ChoixModeDeformation.Fonction && typeFonction == GestionnaireChunks.TypeFonction.Collines)
             {
-                // il faut que la caméra par defaut ait le tag MainCamera pour que le système la reconnaisse comme Camera.main
+                // il faut que la camï¿½ra par defaut ait le tag MainCamera pour que le systï¿½me la reconnaisse comme Camera.main
                 Ray ray = p_gestionnaire.cam.ScreenPointToRay(Mouse.current.position.ReadValue());
 
                 // lancer un rayon
                 if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, p_gestionnaire.maskPickingTerrain))
                 {
-                    // point touché exprimé dans le repère de la grille
+                    // point touchï¿½ exprimï¿½ dans le repï¿½re de la grille
                     appliquerDeformation_Fonction(p_gestionnaire.transform.InverseTransformPoint(hit.point));
                 }
             }
         }
 
-        // Gestion du changement de mode de déformation des textures avec la touche F3
+        // Gestion du changement de mode de dï¿½formation des textures avec la touche F3
         if (Keyboard.current.f3Key.wasPressedThisFrame)
         {
             choixModeDeformation = GestionnaireChunks.ChoixModeDeformation.Texture;
             appliquerDeformation_Texture();
-            // l'image'suivante sera utilisée au prochain appel
+            // l'image'suivante sera utilisï¿½e au prochain appel
             numTexture = (numTexture + 1) % textures.Count;
         }
 
@@ -84,12 +86,12 @@ public class DeformationChunks : MonoBehaviour
             changerModeCalculNormales();
         }
 
-        // Gestion du double clic sur F11 pour réinitialiser le terrain
+        // Gestion du double clic sur F11 pour rï¿½initialiser le terrain
         if (Keyboard.current.f11Key.wasPressedThisFrame)
         {
             if (Time.time - p_dernierTempsF11 < DELAI_DOUBLE_CLIC)
             {
-                // Double clic détecté : réinitialisation du terrain
+                // Double clic dï¿½tectï¿½ : rï¿½initialisation du terrain
                 reinitialiserTerrain();
             }
             else
@@ -99,7 +101,7 @@ public class DeformationChunks : MonoBehaviour
             }
         }
 
-        // changement entre séquentiel et parallèle
+        // changement entre sï¿½quentiel et parallï¿½le
         if (basculerAvecF8 && Keyboard.current.f8Key.wasPressedThisFrame)
         {
             p_gestionnaire.utiliserJobs = !p_gestionnaire.utiliserJobs;
@@ -119,15 +121,15 @@ public class DeformationChunks : MonoBehaviour
     }
     #endregion
 
-    #region Méthodes
-    // Méthode pour appliquer la déformation du terrain selon la fonction choisie
+    #region Mï¿½thodes
+    // Mï¿½thode pour appliquer la dï¿½formation du terrain selon la fonction choisie
     private void appliquerDeformation_Fonction(Vector3? centre = null)
     {
         Stopwatch chrono = Stopwatch.StartNew();
 
         float dimension = p_gestionnaire.dimension;
 
-        //position aléatoire du centre de la fonction de déformation pour les collines (sur toute la grille)
+        //position alï¿½atoire du centre de la fonction de dï¿½formation pour les collines (sur toute la grille)
         float xCentre = centre == null ? Random.Range(p_gestionnaire.XMin * dimension - dimension / 2f, p_gestionnaire.XMax * dimension + dimension / 2f) : centre.Value.x;
         float zCentre = centre == null ? Random.Range(p_gestionnaire.ZMin * dimension - dimension / 2f, p_gestionnaire.ZMax * dimension + dimension / 2f) : centre.Value.z;
 
@@ -150,14 +152,14 @@ public class DeformationChunks : MonoBehaviour
     {
         Stopwatch chrono = Stopwatch.StartNew();
 
-        // Sécurité : vérifier qu'on a bien des textures dans la liste
+        // Sï¿½curitï¿½ : vï¿½rifier qu'on a bien des textures dans la liste
         if (textures == null || textures.Count == 0)
         {
-            UnityEngine.Debug.LogWarning("Aucune texture de type HeightMap n'est assignée dans l'inspecteur !");
+            UnityEngine.Debug.LogWarning("Aucune texture de type HeightMap n'est assignï¿½e dans l'inspecteur !");
             return;
         }
 
-        // Récupération de la texture courante selon l'index numTexture
+        // Rï¿½cupï¿½ration de la texture courante selon l'index numTexture
         Texture2D heightmap = textures[numTexture % textures.Count];
 
         if (heightmap == null) return;
@@ -243,7 +245,7 @@ public class DeformationChunks : MonoBehaviour
         appliquerDeformationPattern(centreGrille, gauche ? 1f : -1f);
     }
 
-    // La déformation peut concerner jusqu'à 4 chunks (picking dans un coin)
+    // La dï¿½formation peut concerner jusqu'ï¿½ 4 chunks (picking dans un coin)
     private void appliquerDeformationPattern(Vector3 centreGrille, float signe)
     {
         float dimension = p_gestionnaire.dimension;
@@ -251,7 +253,7 @@ public class DeformationChunks : MonoBehaviour
         AnimationCurve courbe = p_gestionnaire.patterns[p_gestionnaire.indexPattern];
         float delta = signe * p_gestionnaire.intensiteMax * Time.deltaTime;
 
-        // Plage de chunks dont l'emprise croise le disque de déformation
+        // Plage de chunks dont l'emprise croise le disque de dï¿½formation
         int xMinChunk = Mathf.FloorToInt((centreGrille.x - rayonVoisinage + dimension / 2f) / dimension);
         int xMaxChunk = Mathf.FloorToInt((centreGrille.x + rayonVoisinage + dimension / 2f) / dimension);
         int zMinChunk = Mathf.FloorToInt((centreGrille.z - rayonVoisinage + dimension / 2f) / dimension);
@@ -270,7 +272,7 @@ public class DeformationChunks : MonoBehaviour
             }
         }
 
-        // continuité des hauteurs et des normales sur les frontières entre chunks touchés
+        // continuitï¿½ des hauteurs et des normales sur les frontiï¿½res entre chunks touchï¿½s
         p_gestionnaire.HarmoniserChunks(p_chunksTouches);
 
         foreach (CreationSimpleTerrain chunk in p_chunksTouches)

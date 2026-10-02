@@ -12,17 +12,20 @@ public class SpectatorCamera : MonoBehaviour
     public KeyCode upKey = KeyCode.E;
     public KeyCode downKey = KeyCode.Q;
 
+    [SerializeField]
+    private GestionnaireChunks p_gestionnaire;
+
     private float rotationX = 0f;
     private float rotationY = 0f;
 
     void Start()
     {
-        // Verrouille le curseur de la souris au centre de l'écran
+        // Verrouille le curseur de la souris au centre de l'ï¿½cran
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
 
-        // Initialise la rotation actuelle basée sur la position de départ de la caméra
+        // Initialise la rotation actuelle basï¿½e sur la position de dï¿½part de la camï¿½ra
         Vector3 rotation = transform.localRotation.eulerAngles;
         rotationX = rotation.y;
         rotationY = -rotation.x;
@@ -30,15 +33,17 @@ public class SpectatorCamera : MonoBehaviour
 
     void Update()
     {
+        if (p_gestionnaire.affichageInfos) return;
+        
         // --- ROTATION (SOURIS) ---
         rotationX += Input.GetAxis("Mouse X") * freeLookSensitivity;
         rotationY += Input.GetAxis("Mouse Y") * freeLookSensitivity;
-        rotationY = Mathf.Clamp(rotationY, -90f, 90f); // Empêche de faire des loopings verticaux
+        rotationY = Mathf.Clamp(rotationY, -90f, 90f); // Empï¿½che de faire des loopings verticaux
 
         transform.localRotation = Quaternion.AngleAxis(rotationX, Vector3.up) * Quaternion.AngleAxis(rotationY, Vector3.left);
 
-        // --- DÉPLACEMENT (CLAVIER) ---
-        // Choix de la vitesse si Shift gauche est enfoncé
+        // --- Dï¿½PLACEMENT (CLAVIER) ---
+        // Choix de la vitesse si Shift gauche est enfoncï¿½
         float currentSpeed = Input.GetKey(boostKey) ? fastSpeed : movementSpeed;
 
         // Inputs horizontaux (Q/D ou A/D selon clavier) et verticaux (Z/S ou W/S)
@@ -47,11 +52,11 @@ public class SpectatorCamera : MonoBehaviour
 
         Vector3 direction = new Vector3(moveSide, 0, moveForward);
 
-        // Gestion de la montée / descente
+        // Gestion de la montï¿½e / descente
         if (Input.GetKey(upKey)) direction.y += 1f;
         if (Input.GetKey(downKey)) direction.y -= 1f;
 
-        // Déplacement par rapport à l'orientation de la caméra
+        // Dï¿½placement par rapport ï¿½ l'orientation de la camï¿½ra
         transform.Translate(direction * currentSpeed * Time.deltaTime);
     }
 }
