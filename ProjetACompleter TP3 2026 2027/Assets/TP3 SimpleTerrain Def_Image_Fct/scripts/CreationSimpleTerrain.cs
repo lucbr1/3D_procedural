@@ -251,6 +251,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         if (!p_updateCollider) return;
         if (boutonEnfonce && Time.time - p_dernierMajCollider < DELAI_MAJ_COLLIDER) return;
 
+        p_mesh.RecalculateBounds();   
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_mesh;
         p_updateCollider = false;
