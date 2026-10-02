@@ -4,7 +4,6 @@ using UnityEngine.InputSystem;
 using System.Diagnostics;
 
 
-// Entrées de déformation (F2, F3, F10, F11, clics, molette, espace) appliquées à toute la grille de chunks
 [RequireComponent(typeof(GestionnaireChunks))]
 public class DeformationChunks : MonoBehaviour
 {
@@ -28,9 +27,9 @@ public class DeformationChunks : MonoBehaviour
 
     private const float DELAI_DOUBLE_CLIC = 0.5f;
 
-    [Header("TP5 - Comparaison des performances")]
-    [Tooltip("Affiche le temps des fonctions TP5 dans la Console")]
-    public bool afficherTempsTP5 = true;
+    [Header("Comparaison des performances")]
+    [Tooltip("Affiche le temps des fonctions dans la Console")]
+    public bool afficherTemps = true;
 
     [Tooltip("F8 : bascule entre la version séquentielle et la version Jobs")]
     public bool basculerAvecF8 = true;
@@ -100,22 +99,20 @@ public class DeformationChunks : MonoBehaviour
             }
         }
 
-        // TP5 - changement rapide entre séquentiel et parallèle
+        // changement entre séquentiel et parallèle
         if (basculerAvecF8 && Keyboard.current.f8Key.wasPressedThisFrame)
         {
             p_gestionnaire.utiliserJobs = !p_gestionnaire.utiliserJobs;
             p_gestionnaire.AppliquerConfigurationJobs();
-            UnityEngine.Debug.Log("TP5 - Mode : " + (p_gestionnaire.utiliserJobs ? "PARALLELE (Jobs)" : "SEQUENTIEL"));
+            UnityEngine.Debug.Log("Mode : " + (p_gestionnaire.utiliserJobs ? "PARALLELE (Jobs)" : "SEQUENTIEL"));
         }
 
-        //TP4 - ex1
 
         GererMolette();
         GererDeformation();
         MettreAJourCollidersSiNecessaire();
         MettreAJourApercu();
 
-        //TP4 - ex2
         // Gestion du changement de distance de voisinage avec la touche D
         if (Keyboard.current.dKey.wasPressedThisFrame)
             p_gestionnaire.typeDistance = (GestionnaireChunks.TypeDistance)(((int)p_gestionnaire.typeDistance + 1) % 4);
@@ -146,10 +143,9 @@ public class DeformationChunks : MonoBehaviour
             liste[i].FinaliserDeformation(variations[i]);
 
         chrono.Stop();
-        AfficherTempsTP5("AppliquerFonction", chrono.Elapsed.TotalMilliseconds, liste.Count);
+        AfficherTemps("AppliquerFonction", chrono.Elapsed.TotalMilliseconds, liste.Count);
     }
 
-    // Méthode pour appliquer la déformation du terrain selon la texture HeightMap choisie
     private void appliquerDeformation_Texture()
     {
         Stopwatch chrono = Stopwatch.StartNew();
@@ -185,7 +181,7 @@ public class DeformationChunks : MonoBehaviour
             liste[i].FinaliserDeformation(variations[i]);
 
         chrono.Stop();
-        AfficherTempsTP5("AppliquerTexture", chrono.Elapsed.TotalMilliseconds, liste.Count);
+        AfficherTemps("AppliquerTexture", chrono.Elapsed.TotalMilliseconds, liste.Count);
     }
 
     private void changerModeCalculNormales()
@@ -205,7 +201,7 @@ public class DeformationChunks : MonoBehaviour
             chunk.FinaliserNormales();
 
         chrono.Stop();
-        AfficherTempsTP5("RecalculerToutesLesNormales", chrono.Elapsed.TotalMilliseconds, liste.Count);
+        AfficherTemps("RecalculerToutesLesNormales", chrono.Elapsed.TotalMilliseconds, liste.Count);
     }
 
     private void reinitialiserTerrain()
@@ -219,7 +215,7 @@ public class DeformationChunks : MonoBehaviour
         }
 
         chrono.Stop();
-        AfficherTempsTP5("Reinitialiser", chrono.Elapsed.TotalMilliseconds, p_gestionnaire.NombreChunks);
+        AfficherTemps("Reinitialiser", chrono.Elapsed.TotalMilliseconds, p_gestionnaire.NombreChunks);
     }
 
     //TP4 - ex1
@@ -289,15 +285,15 @@ public class DeformationChunks : MonoBehaviour
             chunk.MettreAJourColliderSiNecessaire(boutonEnfonce);
     }
 
-    private void AfficherTempsTP5(string nomFonction, double tempsMs, int nombreChunks)
+    private void AfficherTemps(string nomFonction, double tempsMs, int nombreChunks)
     {
-        if (!afficherTempsTP5) return;
+        if (!afficherTemps) return;
 
         string mode = p_gestionnaire.utiliserJobs ? "PARALLELE (Jobs)" : "SEQUENTIEL";
         double moyenne = nombreChunks > 0 ? tempsMs / nombreChunks : 0.0;
 
         UnityEngine.Debug.Log(
-            "TP5 - " + nomFonction +
+            nomFonction +
             " | " + mode +
             " | " + tempsMs.ToString("F3") + " ms" +
             " | " + nombreChunks + " chunk(s)" +

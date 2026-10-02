@@ -16,7 +16,6 @@ public class CreationSimpleTerrain : MonoBehaviour
 
     private GestionnaireChunks p_gestionnaire;
 
-    // Position du chunk dans la grille (x, z)
     public Vector2Int coordonnees;
     [HideInInspector] public ushort resolution;
 
@@ -37,10 +36,9 @@ public class CreationSimpleTerrain : MonoBehaviour
     private LODChunk p_lod;
     private ApercuDeformation p_apercu;
 
-    #region Jobs TP5
-    // Permet de changer facilement entre les deux versions depuis l'Inspector.
-    public bool utiliserJobs = false;
-    public int lotJobs = 64;
+    #region Jobs
+    [HideInInspector]public bool utiliserJobs = false;
+    [HideInInspector]public int lotJobs = 64;
     #endregion
 
     #region Déformation
@@ -73,7 +71,6 @@ public class CreationSimpleTerrain : MonoBehaviour
 
     public int[] ResolutionsLOD { get { return p_lod.Resolutions; } }
 
-    // Retourne l'index du LOD affiché (3 = hors champ, -1 = pas de LOD sur ce chunk)
     public int ObtenirLODActuel()
     {
         return p_lod.ObtenirLODActuel();
@@ -83,14 +80,12 @@ public class CreationSimpleTerrain : MonoBehaviour
     #region Unity events
     void Update()
     {
-        // Vérifie si un LOD doit être actualisé
         if (p_lod != null)
             p_lod.VerifierActualisation();
     }
     #endregion
 
     #region Création
-    // Appelée par le gestionnaire juste après la création du GameObject (remplace Awake / Start)
     public void Initialiser(GestionnaireChunks gestionnaire, Vector2Int coord)
     {
         p_gestionnaire = gestionnaire;
@@ -99,7 +94,6 @@ public class CreationSimpleTerrain : MonoBehaviour
 
         gameObject.name = "Chunk_" + coord.x + "_" + coord.y;
 
-        // les rayCast exploiteront cette layer pour ne tester la collision qu'avec les chunks
         gameObject.layer = LayerMask.NameToLayer("L_PickingTerrain");
 
         transform.SetParent(gestionnaire.transform, false);
@@ -121,7 +115,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_apercu = new ApercuDeformation(this, gestionnaire);
     }
 
-    // Méthode pour créer le maillage du terrain
     private void creerLeMeshTerrain()
     {
         float dimension = p_gestionnaire.dimension;
@@ -180,7 +173,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_mesh.RecalculateBounds();
     }
 
-    // Méthode pour pré-calculer le voisinage des triangles pour chaque vertex
     private void bakerVoisinageTriangles()
     {
         // Initialisation du tableau pour chaque vertex
@@ -212,7 +204,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_lod.DefinirMateriel(materiel);
     }
 
-    // Envoie les vertices / normales au mesh
     public void MettreAJourMesh(bool colliderDiffere)
     {
         p_mesh.vertices = p_vertices;
@@ -222,7 +213,6 @@ public class CreationSimpleTerrain : MonoBehaviour
             p_updateCollider = true;
     }
 
-    // Fin d'une déformation globale (fonction, texture, reset, raccord) : mesh + collider + LOD
     public void FinaliserDeformation(float variationMax)
     {
         MettreAJourMesh(false);
@@ -230,22 +220,18 @@ public class CreationSimpleTerrain : MonoBehaviour
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_mesh;
 
-        // Mise à jour intelligente des LOD
         p_lod.GererActualisation(variationMax);
     }
 
-    // Fin d'un changement de mode de calcul des normales
     public void FinaliserNormales()
     {
         p_mesh.normals = p_normals;
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_mesh;
 
-        // Les normales des LOD utilisent les nouvelles normales
         p_lod.MarquerAActualiser();
     }
 
-    // Rebaker un MeshCollider est coûteux : on le limite à 10x/s pendant le clic, et on finalise au relâchement
     public void MettreAJourColliderSiNecessaire(bool boutonEnfonce)
     {
         if (!p_updateCollider) return;
@@ -268,7 +254,6 @@ public class CreationSimpleTerrain : MonoBehaviour
             RecalculerToutesLesNormales_Sequentiel();
     }
 
-    // Ancienne version conservee pour comparer les performances.
     private void RecalculerToutesLesNormales_Sequentiel()
     {
         for (int i = 0; i < p_vertices.Length; i++)
@@ -328,14 +313,12 @@ public class CreationSimpleTerrain : MonoBehaviour
         nombreVoisinsNative.Dispose();
     }
 
-    // Méthode pour calculer la normale d'un vertex en fonction des triangles voisins
     private void calculerNormaleVertex(uint num_Vertex)
     {
         Vector3 vPosition = p_vertices[num_Vertex];
         Vector3 normaleSomme = Vector3.zero;
         float sommePoids = 0f;
 
-        // Récupération directe des triangles voisins pré-calculés
         List<int> trianglesAdjacents = p_trianglesVoisinsParVertex[num_Vertex];
 
         foreach (int idxTriangle in trianglesAdjacents)
@@ -392,14 +375,13 @@ public class CreationSimpleTerrain : MonoBehaviour
         }
     }
 
-    // Méthode pour déboguer les normales
     public void DebugAllNormals(bool affN_Orientation, bool affN_Eclairage, bool affN_vertices)
     {
         if (affN_Orientation)
         {
             Vector3 vposmoyenne, v1, v2, vnormetri;
             for (int num_tri = 0; num_tri < p_triangles.Length; num_tri += 3)
-            { // calcul de vnormetri comme le produit vectoriel de V01^V02
+            {
                 vposmoyenne =
                 p_vertices[p_triangles[num_tri]] + p_vertices[p_triangles[num_tri + 1]] +
                 p_vertices[p_triangles[num_tri + 2]];
@@ -433,8 +415,6 @@ public class CreationSimpleTerrain : MonoBehaviour
     #endregion
 
     #region Déformations
-    // Déformation par fonction. Les coordonnées passées à la fonction sont celles de la GRILLE (pas du chunk)
-    // afin que la fonction soit continue d'un chunk à l'autre. Retourne la variation max.
     public float AppliquerFonction(GestionnaireChunks.TypeFonction typeFonction, float xCentre, float zCentre)
     {
         if (utiliserJobs)
@@ -443,7 +423,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         return AppliquerFonction_Sequentiel(typeFonction, xCentre, zCentre);
     }
 
-    // Ancienne version conservee pour comparer les performances.
     private float AppliquerFonction_Sequentiel(GestionnaireChunks.TypeFonction typeFonction, float xCentre, float zCentre)
     {
         float variationMax = 0f;
@@ -518,9 +497,7 @@ public class CreationSimpleTerrain : MonoBehaviour
         return variationMax;
     }
 
-    // Déformation par HeightMap : la texture recouvre toute la grille de chunks, comme s'il n'y avait qu'un seul terrain.
-    // xMinGrille / zMinGrille : coin de la grille, largeurGrille / longueurGrille : sa taille (repère du gestionnaire).
-    // Retourne la variation max.
+
     public float AppliquerTexture(Texture2D heightmap, float xMinGrille, float zMinGrille, float largeurGrille, float longueurGrille)
     {
         if (utiliserJobs)
@@ -529,7 +506,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         return AppliquerTexture_Sequentiel(heightmap, xMinGrille, zMinGrille, largeurGrille, longueurGrille);
     }
 
-    // Ancienne version conservee pour comparer les performances.
     private float AppliquerTexture_Sequentiel(Texture2D heightmap, float xMinGrille, float zMinGrille, float largeurGrille, float longueurGrille)
     {
         float variationMax = 0f;
@@ -590,7 +566,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         return variationMax;
     }
 
-    // Remet le chunk à plat. Retourne la variation max.
     public float Reinitialiser()
     {
         if (utiliserJobs)
@@ -599,7 +574,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         return Reinitialiser_Sequentiel();
     }
 
-    // Ancienne version conservee pour comparer les performances.
     private float Reinitialiser_Sequentiel()
     {
         float variationMax = 0f;
@@ -645,21 +619,17 @@ public class CreationSimpleTerrain : MonoBehaviour
         return variationMax;
     }
 
-    //TP4 - ex1
-    // centreGrille : point visé exprimé dans le repère du gestionnaire (commun à tous les chunks).
-    // Retourne false si le voisinage ne touche aucun vertex de ce chunk.
+
     public bool AppliquerDeformationPattern(Vector3 centreGrille, float delta, AnimationCurve courbe)
     {
         Vector3 centreLocal = centreGrille - transform.localPosition;
 
         CalculerFenetre(centreLocal, out int iMin, out int iMax, out int jMin, out int jMax);
 
-        // le voisinage ne touche pas ce chunk
         if (iMin > iMax || jMin > jMax) return false;
 
         float variationMax = 0f;
 
-        // test précis dans la fenêtre + application de la courbe
         for (int i = iMin; i <= iMax; i++)
         {
             for (int j = jMin; j <= jMax; j++)
@@ -668,7 +638,6 @@ public class CreationSimpleTerrain : MonoBehaviour
                 float dx = p_vertices[index].x - centreLocal.x;
                 float dz = p_vertices[index].z - centreLocal.z;
 
-                // TP4 - ex2 : le test dépend de la distance choisie (t : 0 au centre, 1 au bord)
                 if (!p_gestionnaire.EstDansVoisinage(dx, dz, out float t)) continue;
 
                 float deplacement = delta * courbe.Evaluate(t);
@@ -682,14 +651,11 @@ public class CreationSimpleTerrain : MonoBehaviour
             for (int j = Mathf.Max(0, jMin - 1); j <= Mathf.Min(resolution - 1, jMax + 1); j++)
                 calculerNormaleVertex((uint)(i * resolution + j));
 
-        // Mise à jour intelligente des LOD
         p_lod.GererActualisation(variationMax);
 
         return true;
     }
 
-    // Fenêtre de vertices (indices i, j) touchée par un voisinage centré en "centre" (repère du chunk)
-    // Si le centre est très loin du chunk, min > max : la fenêtre est vide
     public void CalculerFenetre(Vector3 centre, out int iMin, out int iMax, out int jMin, out int jMax)
     {
         float dimension = p_gestionnaire.dimension;
@@ -702,7 +668,6 @@ public class CreationSimpleTerrain : MonoBehaviour
         iMin = Mathf.Max(0, iCentre - rayonCases); iMax = Mathf.Min(resolution - 1, iCentre + rayonCases);
     }
 
-    // centreGrille : point visé dans le repère du gestionnaire. Chaque chunk affiche sa partie de l'aperçu.
     public void MettreAJourApercu(bool actif, Vector3 centreGrille, float signe)
     {
         Vector3 centre = centreGrille - transform.localPosition;
